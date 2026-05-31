@@ -12,7 +12,7 @@ Due librerie popolari sono state escluse a priori:
 ## Confronto
 
 | Criterio | Clerk | Auth0 | Better Auth (self-hosted) | Custom @fastify/jwt + bcrypt |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **Free tier** | 50K MAU | 25K MAU | Illimitato (solo infrastruttura) | Illimitato |
 | **Costo** | $25/mo (Pro) | $35/mo (Essentials) | Gratis (MIT) | Gratis |
 | **Email/password** | Sì | Sì | Sì | DIY |
@@ -32,15 +32,19 @@ Due librerie popolari sono state escluse a priori:
 ## Analisi per opzione
 
 ### Clerk
+
 Il migliore dei servizi gestiti. SDK Fastify ufficiale, 50K MAU gratis, setup in poche ore. I dati utente risiedono sui server Clerk (EU, GDPR-compliant), ma non sono propri. MFA disponibile solo dal piano Pro ($25/mo).
 
 ### Auth0
+
 Più complesso da configurare, free tier più basso (25K MAU), MFA a pagamento. Nessun vantaggio concreto rispetto a Clerk per questo caso d'uso.
 
 ### Better Auth (self-hosted)
+
 Libreria MIT, gira all'interno del processo Fastify, i dati utente stanno nel PostgreSQL già su Railway. OAuth, MFA, email verification e password reset inclusi come plugin gratuiti. Integrazione nativa con Drizzle. YC-backed ($5M funding), rischio abbandono basso. Unico overhead: configurare un email sender per verification e reset (Resend: gratis fino a 3K email/mese).
 
 ### Custom @fastify/jwt + bcrypt
+
 Controllo totale, zero dipendenze esterne. Implementare correttamente refresh token rotation, revocation, rate limiting e tutti i flow di sicurezza richiede però 2–4 settimane. Non giustificato per l'MVP.
 
 ---

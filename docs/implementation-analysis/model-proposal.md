@@ -3,7 +3,7 @@
 ## Decisioni preliminari
 
 | Tema | Decisione |
-|------|-----------|
+| --- | --- |
 | Proposals vs Events | Tabelle separate — la tabella pubblica `events` contiene solo eventi approvati |
 | Coordinate | Map picker (lat/lng espliciti); campo `locationName` compatibile con geocoding futuro senza migrazioni |
 | Blob storage | Chiave opaca (`coverImageKey`) risolta in URL dal `StorageService` — provider intercambiabile |

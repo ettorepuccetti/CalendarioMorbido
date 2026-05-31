@@ -25,7 +25,7 @@ prototype/wireframes/calendariomorbido-wireframes.html  # Interactive HTML proto
 ## Tech Stack (decided)
 
 | Layer | Choice |
-|-------|--------|
+| --- | --- |
 | Hosting | Railway (all services) |
 | Frontend | Next.js (TypeScript), server-side rendered |
 | Backend | Fastify (TypeScript), separate Railway service |
@@ -74,7 +74,7 @@ Full endpoint details: `docs/implementation-analysis/api-surface.md`.
 The wireframes explore two layout variants per screen — none have been chosen yet:
 
 | Screen | Variant A | Variant B |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | Public Calendar | Density (list-heavy) | Visual exploration (card grid) |
 | Map View | Immersive (map primary) | Hybrid (split map/list) |
 | Event Details | Hero image layout | Structured card layout |

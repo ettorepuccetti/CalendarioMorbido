@@ -39,7 +39,7 @@ Authorization: Bearer <token>
 ## Events (pubblici)
 
 | Method | Path | Auth |
-|--------|------|------|
+| --- | --- | --- |
 | `GET` | `/api/events` | No |
 | `GET` | `/api/events/map` | No |
 | `GET` | `/api/events/:id` | No |
@@ -49,7 +49,7 @@ Authorization: Bearer <token>
 Query params:
 
 | Param | Tipo | Default |
-|-------|------|---------|
+| --- | --- | --- |
 | `region` | `RegionEnum` | — |
 | `type` | `"single" \| "multi"` | — |
 | `page` | `number` | `1` |
@@ -91,7 +91,7 @@ POST  /api/auth/verify-email
 ## Calendario personale (utente autenticato)
 
 | Method | Path | Auth |
-|--------|------|------|
+| --- | --- | --- |
 | `GET` | `/api/me/saved-events` | Sì |
 | `PUT` | `/api/me/saved-events/:eventId` | Sì |
 | `DELETE` | `/api/me/saved-events/:eventId` | Sì |
@@ -101,7 +101,7 @@ POST  /api/auth/verify-email
 ## Proposte (utente autenticato)
 
 | Method | Path | Auth |
-|--------|------|------|
+| --- | --- | --- |
 | `GET` | `/api/me/proposals` | Sì |
 | `GET` | `/api/me/proposals/:id` | Sì |
 | `POST` | `/api/proposals` | Sì |
@@ -133,7 +133,7 @@ POST  /api/auth/verify-email
 ## Admin
 
 | Method | Path | Auth |
-|--------|------|------|
+| --- | --- | --- |
 | `GET` | `/api/admin/proposals` | Admin |
 | `GET` | `/api/admin/proposals/:id` | Admin |
 | `PATCH` | `/api/admin/proposals/:id` | Admin |
@@ -143,7 +143,7 @@ POST  /api/auth/verify-email
 Query params:
 
 | Param | Tipo | Default |
-|-------|------|---------|
+| --- | --- | --- |
 | `status` | `"pending" \| "approved" \| "rejected"` | `"pending"` |
 | `page` | `number` | `1` |
 | `limit` | `number` | `20` |
@@ -167,7 +167,7 @@ Quando `action: "approve"`, il backend esegue in un'unica transazione:
 ## Storage
 
 | Method | Path | Auth |
-|--------|------|------|
+| --- | --- | --- |
 | `POST` | `/api/uploads/presign` | Sì |
 
 ### `POST /api/uploads/presign`

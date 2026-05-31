@@ -94,7 +94,7 @@ La mappa è una feature di primo piano nell'applicazione, non accessoria.
 ## Ruoli Utente e Permessi
 
 | Ruolo | Capacità |
-|-------|----------|
+| --- | --- |
 | **Guest** | Visualizza calendario pubblico, filtra eventi, vede dettagli e mappa |
 | **Utente registrato** | Salva eventi nel calendario personale, propone nuovi eventi, monitora stato proposte |
 | **Amministratore** | Accesso diretto al DB per approvare/rifiutare proposte (MVP) |
