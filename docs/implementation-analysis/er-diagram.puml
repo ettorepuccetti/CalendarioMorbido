@@ -1,0 +1,107 @@
+@startuml er-diagram
+
+skinparam linetype ortho
+
+' ── App tables ──────────────────────────────────────────
+
+entity "events" {
+  * id : uuid <<PK>>
+  --
+  proposalId : uuid <<FK>>
+  * title : text
+  description : text
+  * startDate : date
+  * endDate : date
+  * region : region_enum
+  officialUrl : text
+  coverImageKey : text
+  * startLocationName : text
+  * startLat : numeric
+  * startLng : numeric
+  endLocationName : text
+  endLat : numeric
+  endLng : numeric
+  * createdAt : timestamp
+  * updatedAt : timestamp
+}
+
+entity "proposals" {
+  * id : uuid <<PK>>
+  --
+  * userId : text <<FK>>
+  * status : pending | approved | rejected
+  rejectionReason : text
+  * title : text
+  description : text
+  * startDate : date
+  * endDate : date
+  * region : region_enum
+  officialUrl : text
+  coverImageKey : text
+  * startLocationName : text
+  * startLat : numeric
+  * startLng : numeric
+  endLocationName : text
+  endLat : numeric
+  endLng : numeric
+  * submittedAt : timestamp
+  reviewedAt : timestamp
+}
+
+entity "saved_events" {
+  * userId : text <<FK>>
+  * eventId : uuid <<FK>>
+  --
+  * savedAt : timestamp
+}
+
+' ── Better Auth tables ──────────────────────────────────
+
+entity "user" {
+  * id : text <<PK>>
+  --
+  * email : text
+  * name : text
+  * role : user | admin
+  * emailVerified : boolean
+  * createdAt : timestamp
+  * updatedAt : timestamp
+}
+
+entity "session" {
+  * id : text <<PK>>
+  --
+  * userId : text <<FK>>
+  * token : text
+  * expiresAt : timestamp
+  * createdAt : timestamp
+  * updatedAt : timestamp
+}
+
+entity "account" {
+  * id : text <<PK>>
+  --
+  * userId : text <<FK>>
+  * providerId : text
+  * accountId : text
+}
+
+entity "verification" {
+  * id : text <<PK>>
+  --
+  * identifier : text
+  * value : text
+  * expiresAt : timestamp
+}
+
+' ── Relationships ────────────────────────────────────────
+
+user         ||--o{  proposals   : "submits"
+user         ||--o{  saved_events : "saves"
+events       ||--o{  saved_events : "saved in"
+proposals    |o--||  events       : "becomes"
+
+user         ||--o{  session      : ""
+user         ||--o{  account      : ""
+
+@enduml

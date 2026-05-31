@@ -10,4 +10,5 @@ Documentazione delle decisioni architetturali e implementative del progetto, pro
 ## Implementazione
 
 - [Data Model](./model-proposal.md) — schema Drizzle, tabelle, enums e note di design
+- [ER Diagram](./er-diagram.puml) — diagramma entità-relazioni in PlantUML
 - [API Surface](./api-surface.md) — endpoint REST, convenzioni di paginazione e flusso di approvazione
