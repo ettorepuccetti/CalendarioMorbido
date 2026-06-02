@@ -6,7 +6,12 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { REGIONS, type Region } from "@/lib/constants/regions";
-import { readEventContent, str } from "@/lib/actions/event-fields";
+import { EVENT_TYPES, type EventType } from "@/lib/constants/event-types";
+import {
+  readEventContent,
+  readEventAdminFields,
+  str,
+} from "@/lib/actions/event-fields";
 
 export async function approveProposal(proposalId: string) {
   const supabase = await createClient();
@@ -59,9 +64,12 @@ export async function updateEvent(
   const supabase = await createClient();
   const t = await getTranslations("errors");
   const content = readEventContent(formData);
+  const adminFields = readEventAdminFields(formData);
 
   if (!REGIONS.includes(content.region as Region))
     return { error: t("invalidRegion") };
+  if (!content.event_type || !EVENT_TYPES.includes(content.event_type as EventType))
+    return { error: t("invalidEventType") };
   if (!content.start_date || !content.end_date)
     return { error: t("datesRequired") };
   if (content.end_date < content.start_date)
@@ -82,6 +90,19 @@ export async function updateEvent(
     p_start_provincia: content.start_provincia,
     p_end_comune: content.end_comune,
     p_end_provincia: content.end_provincia,
+    p_event_type: content.event_type,
+    p_terrain: content.terrain,
+    p_distances_km: content.distances_km,
+    p_elevation_gain_m: content.elevation_gain_m,
+    p_instagram_url: content.instagram_url,
+    p_facebook_url: content.facebook_url,
+    p_organizer: content.organizer,
+    p_circuit: content.circuit,
+    p_bike_type: adminFields.bike_type,
+    p_competitive: adminFields.competitive,
+    p_registration_fee: adminFields.registration_fee,
+    p_contact_email: adminFields.contact_email,
+    p_contact_phone: adminFields.contact_phone,
   });
   if (error) return { error: error.message };
 

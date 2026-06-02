@@ -29,6 +29,15 @@ create table if not exists public.proposals (
   start_provincia text not null,
   end_comune text,
   end_provincia text,
+  -- attributi evento (campi pubblici, copiati su events all'approvazione)
+  event_type text,
+  terrain text,
+  distances_km text,
+  elevation_gain_m text,
+  instagram_url text,
+  facebook_url text,
+  organizer text,
+  circuit text,
   submitted_at timestamptz not null default now(),
   reviewed_at timestamptz,
   constraint proposals_region_chk check (region in (
@@ -36,7 +45,9 @@ create table if not exists public.proposals (
     'Friuli-Venezia Giulia', 'Liguria', 'Emilia-Romagna', 'Toscana', 'Umbria',
     'Marche', 'Lazio', 'Abruzzo', 'Molise', 'Campania', 'Puglia', 'Basilicata',
     'Calabria', 'Sicilia', 'Sardegna')),
-  constraint proposals_dates_chk check (end_date >= start_date)
+  constraint proposals_dates_chk check (end_date >= start_date),
+  constraint proposals_event_type_chk check (event_type is null or event_type in (
+    'ciclostorica', 'cicloturistica', 'gravel', 'bikepacking', 'mtb', 'randonnee'))
 );
 
 create table if not exists public.events (
@@ -53,6 +64,23 @@ create table if not exists public.events (
   start_provincia text not null,
   end_comune text,
   end_provincia text,
+  -- attributi evento (campi pubblici)
+  event_type text,
+  terrain text,
+  distances_km text,
+  elevation_gain_m text,
+  instagram_url text,
+  facebook_url text,
+  organizer text,
+  circuit text,
+  -- attributi admin-only (visibili solo al gestore nella pagina evento)
+  bike_type text,
+  competitive text,
+  registration_fee text,
+  contact_email text,
+  contact_phone text,
+  -- solo DB, non mostrato in alcuna UI
+  source text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint events_region_chk check (region in (
@@ -60,7 +88,9 @@ create table if not exists public.events (
     'Friuli-Venezia Giulia', 'Liguria', 'Emilia-Romagna', 'Toscana', 'Umbria',
     'Marche', 'Lazio', 'Abruzzo', 'Molise', 'Campania', 'Puglia', 'Basilicata',
     'Calabria', 'Sicilia', 'Sardegna')),
-  constraint events_dates_chk check (end_date >= start_date)
+  constraint events_dates_chk check (end_date >= start_date),
+  constraint events_event_type_chk check (event_type is null or event_type in (
+    'ciclostorica', 'cicloturistica', 'gravel', 'bikepacking', 'mtb', 'randonnee'))
 );
 
 create table if not exists public.saved_events (
@@ -72,6 +102,7 @@ create table if not exists public.saved_events (
 
 create index if not exists events_region_idx on public.events (region);
 create index if not exists events_start_date_idx on public.events (start_date);
+create index if not exists events_event_type_idx on public.events (event_type);
 create index if not exists proposals_user_idx on public.proposals (user_id);
 create index if not exists proposals_status_idx on public.proposals (status);
 
@@ -144,11 +175,15 @@ begin
 
   insert into public.events (
     proposal_id, title, description, start_date, end_date, region, official_url,
-    cover_image_key, start_comune, start_provincia, end_comune, end_provincia)
+    cover_image_key, start_comune, start_provincia, end_comune, end_provincia,
+    event_type, terrain, distances_km, elevation_gain_m,
+    instagram_url, facebook_url, organizer, circuit)
   values (
     v_p.id, v_p.title, v_p.description, v_p.start_date, v_p.end_date, v_p.region,
     v_p.official_url, v_p.cover_image_key, v_p.start_comune, v_p.start_provincia,
-    v_p.end_comune, v_p.end_provincia)
+    v_p.end_comune, v_p.end_provincia,
+    v_p.event_type, v_p.terrain, v_p.distances_km, v_p.elevation_gain_m,
+    v_p.instagram_url, v_p.facebook_url, v_p.organizer, v_p.circuit)
   returning id into v_event_id;
 
   update public.proposals

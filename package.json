@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:import": "tsx scripts/import-events.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -26,6 +27,7 @@
     "eslint-config-next": "15.1.6",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }
