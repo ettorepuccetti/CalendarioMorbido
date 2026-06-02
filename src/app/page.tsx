@@ -10,9 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ region?: string; duration?: string }>;
+  searchParams: Promise<{
+    region?: string;
+    duration?: string;
+    type?: string;
+  }>;
 }) {
-  const { region, duration } = await searchParams;
+  const { region, duration, type } = await searchParams;
   const t = await getTranslations("home");
   const supabase = await createClient();
 
@@ -22,6 +26,7 @@ export default async function HomePage({
     .order("start_date", { ascending: true });
 
   if (region) query = query.eq("region", region);
+  if (type) query = query.eq("event_type", type);
 
   const { data, error } = await query;
   let events = (data ?? []) as EventRow[];

@@ -4,9 +4,10 @@ import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { REGIONS } from "@/lib/constants/regions";
+import { EVENT_TYPES } from "@/lib/constants/event-types";
 import { coverUrl } from "@/lib/utils/storage";
 import { useToast } from "@/components/ui/Toast";
-import type { EventContent } from "@/lib/types/db";
+import type { EventContent, EventAdminFields } from "@/lib/types/db";
 
 type FormAction = (
   prev: unknown,
@@ -18,11 +19,13 @@ export default function EventForm({
   action,
   initial,
   submitLabel = "Salva",
+  showAdminFields = false,
 }: {
   userId: string;
   action: FormAction;
-  initial?: Partial<EventContent>;
+  initial?: Partial<EventContent & EventAdminFields>;
   submitLabel?: string;
+  showAdminFields?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const originalKey = initial?.cover_image_key ?? "";
@@ -30,6 +33,7 @@ export default function EventForm({
   const [uploading, setUploading] = useState(false);
   const { showToast } = useToast();
   const t = useTranslations("form");
+  const tTypes = useTranslations("eventTypes");
 
   useEffect(() => {
     if (state?.error) showToast(state.error, "error");
@@ -143,6 +147,28 @@ export default function EventForm({
         </select>
       </div>
 
+      <div>
+        <label className="field-label" htmlFor="event_type">
+          {t("eventType")}
+        </label>
+        <select
+          id="event_type"
+          name="event_type"
+          required
+          className="field-input"
+          defaultValue={initial?.event_type ?? ""}
+        >
+          <option value="" disabled>
+            {t("select")}
+          </option>
+          {EVENT_TYPES.map((et) => (
+            <option key={et} value={et}>
+              {tTypes(et)}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <fieldset className="card space-y-3 p-3">
         <legend className="px-1 font-head text-lg">{t("start")}</legend>
         <div className="grid grid-cols-2 gap-3">
@@ -218,6 +244,163 @@ export default function EventForm({
           className="field-input"
         />
       </div>
+
+      <fieldset className="card space-y-3 p-3">
+        <legend className="px-1 font-head text-lg">{t("details")}</legend>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label" htmlFor="terrain">
+              {t("terrain")}
+            </label>
+            <input
+              id="terrain"
+              name="terrain"
+              placeholder="gravel, road…"
+              defaultValue={initial?.terrain ?? ""}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="distances_km">
+              {t("distances")}
+            </label>
+            <input
+              id="distances_km"
+              name="distances_km"
+              placeholder="100/60/30"
+              defaultValue={initial?.distances_km ?? ""}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="elevation_gain_m">
+              {t("elevation")}
+            </label>
+            <input
+              id="elevation_gain_m"
+              name="elevation_gain_m"
+              placeholder="2000"
+              defaultValue={initial?.elevation_gain_m ?? ""}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="organizer">
+              {t("organizer")}
+            </label>
+            <input
+              id="organizer"
+              name="organizer"
+              defaultValue={initial?.organizer ?? ""}
+              className="field-input"
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="field-label" htmlFor="circuit">
+              {t("circuit")}
+            </label>
+            <input
+              id="circuit"
+              name="circuit"
+              defaultValue={initial?.circuit ?? ""}
+              className="field-input"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label" htmlFor="instagram_url">
+            {t("instagram")}
+          </label>
+          <input
+            id="instagram_url"
+            name="instagram_url"
+            type="url"
+            placeholder="https://instagram.com/…"
+            defaultValue={initial?.instagram_url ?? ""}
+            className="field-input"
+          />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="facebook_url">
+            {t("facebook")}
+          </label>
+          <input
+            id="facebook_url"
+            name="facebook_url"
+            type="url"
+            placeholder="https://facebook.com/…"
+            defaultValue={initial?.facebook_url ?? ""}
+            className="field-input"
+          />
+        </div>
+      </div>
+
+      {showAdminFields && (
+        <fieldset className="card space-y-3 border-2 border-dashed border-line p-3">
+          <legend className="px-1 font-head text-lg">{t("adminFields")}</legend>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label" htmlFor="bike_type">
+                {t("bikeType")}
+              </label>
+              <input
+                id="bike_type"
+                name="bike_type"
+                defaultValue={initial?.bike_type ?? ""}
+                className="field-input"
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="competitive">
+                {t("competitive")}
+              </label>
+              <input
+                id="competitive"
+                name="competitive"
+                defaultValue={initial?.competitive ?? ""}
+                className="field-input"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="field-label" htmlFor="registration_fee">
+                {t("fee")}
+              </label>
+              <input
+                id="registration_fee"
+                name="registration_fee"
+                defaultValue={initial?.registration_fee ?? ""}
+                className="field-input"
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="contact_email">
+                {t("email")}
+              </label>
+              <input
+                id="contact_email"
+                name="contact_email"
+                type="email"
+                defaultValue={initial?.contact_email ?? ""}
+                className="field-input"
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="contact_phone">
+                {t("phone")}
+              </label>
+              <input
+                id="contact_phone"
+                name="contact_phone"
+                defaultValue={initial?.contact_phone ?? ""}
+                className="field-input"
+              />
+            </div>
+          </div>
+        </fieldset>
+      )}
 
       <div>
         <label className="field-label" htmlFor="cover">

@@ -41,6 +41,7 @@ export default async function ModificaEventoPage({
         action={updateEvent.bind(null, id)}
         initial={ev}
         submitLabel={t("submit")}
+        showAdminFields
       />
     </div>
   );

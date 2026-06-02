@@ -24,5 +24,26 @@ export function readEventContent(fd: FormData) {
     start_provincia: str(fd, "start_provincia"),
     end_comune: optStr(fd, "end_comune"),
     end_provincia: optStr(fd, "end_provincia"),
+    // attributi evento (campi pubblici)
+    event_type: optStr(fd, "event_type"),
+    terrain: optStr(fd, "terrain"),
+    distances_km: optStr(fd, "distances_km"),
+    elevation_gain_m: optStr(fd, "elevation_gain_m"),
+    instagram_url: optStr(fd, "instagram_url"),
+    facebook_url: optStr(fd, "facebook_url"),
+    organizer: optStr(fd, "organizer"),
+    circuit: optStr(fd, "circuit"),
+  };
+}
+
+// Campi admin-only di un evento letti dal form (solo nell'area gestore).
+// NB: `source` non è editabile dal form (solo DB) → non incluso qui.
+export function readEventAdminFields(fd: FormData) {
+  return {
+    bike_type: optStr(fd, "bike_type"),
+    competitive: optStr(fd, "competitive"),
+    registration_fee: optStr(fd, "registration_fee"),
+    contact_email: optStr(fd, "contact_email"),
+    contact_phone: optStr(fd, "contact_phone"),
   };
 }
