@@ -6,17 +6,20 @@
 
 ## 2. Seed Script — CSV → events table
 
-- [ ] 2.1 Create `scripts/seed-events.mjs` (ESM, no build step needed)
-  - Load `.env.local` manually via `fs.readFileSync` + line-by-line parse (no `dotenv` dep) — same pattern as seed-covers below
-  - Use `csv-parse/sync` to read `docs/events-research/cycling-events-2026.csv`
-  - Field mapping: `name→title`, `date_start→start_date`, `date_end→end_date`, `website→official_url`, `start_city→start_comune`, `province→start_provincia`; all other CSV columns drop (no DB column)
-  - `end_date`: if empty in CSV, set equal to `start_date`
-  - Init Supabase client with `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] 2.2 Upsert on `(title, start_date)` conflict key — `onConflict: 'title,start_date', ignoreDuplicates: false`
-- [ ] 2.3 `--dry-run` flag: log planned rows to console, no DB writes
-- [ ] 2.4 `--include-competitive` flag: default skip rows where `competitive === 'competitive'`; keep `non-competitive` and `mixed`
-- [ ] 2.5 Add `"seed:events": "node scripts/seed-events.mjs"` to `package.json`
-- [ ] 2.6 Run seed, verify row count in Supabase dashboard
+> ✅ Fully implemented in `scripts/import-events.ts` (merged from main). Run with `pnpm db:import`.
+
+Implementation notes for reference:
+- TypeScript + `tsx` (no build step), loads `.env.local` manually without deps
+- Custom RFC4180 CSV parser (no `csv-parse` dep needed)
+- Field mapping: `name→title`, `date_start→start_date`, `date_end→end_date`, `website→official_url`, `start_city→start_comune`, `province→start_provincia`; new columns mapped directly (`event_type`, `terrain`, `distances_km`, `elevation_gain_m`, `instagram_url`, `facebook_url`, `organizer`, `circuit`, `bike_type`, `competitive`, `registration_fee`, `contact_email`, `contact_phone`, `source`)
+- `end_date` fallback to `start_date` when empty
+- Idempotency: skip rows already present by `(title, start_date)` — no filter on `competitive`, stores value as-is
+- `event_type` normalized via `normalizeEventType()` in `src/lib/constants/event-types.ts`
+- `cover_image_key` set to raw `image_url` from CSV (external URL passthrough — Storage re-hosting is task 3)
+- `--dry-run` flag supported; `"db:import": "tsx scripts/import-events.ts"` in `package.json`
+
+- [ ] 2.1 Run `pnpm db:import --dry-run` — verify row count and field mapping
+- [ ] 2.2 Run `pnpm db:import` — verify rows in Supabase dashboard
 
 ## 3. Cover Image Pipeline
 

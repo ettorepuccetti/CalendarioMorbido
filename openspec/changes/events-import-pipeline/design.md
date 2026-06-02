@@ -1,21 +1,24 @@
 ## Context
 
-CSV at `docs/events-research/cycling-events-2026.csv` — 87 rows, 28 columns. Current `events` table has ~11 placeholder rows from `0002_seed.sql`. Public calendar is not useful until real data is loaded.
+CSV at `docs/events-research/cycling-events-2026.csv` — 100 rows, 30 columns. Current `events` table has ~11 placeholder rows from `0002_seed.sql`. Public calendar is not useful until real data is loaded.
 
-Supabase Storage bucket `covers` already exists (public). Cover images need to be fetched from external `image_url` values and re-hosted to avoid URL rot.
+`migration 0005_event_attributes.sql` (merged from main) added all extra CSV columns to `events`: `event_type`, `terrain`, `distances_km`, `elevation_gain_m`, `instagram_url`, `facebook_url`, `organizer`, `circuit`, `bike_type`, `competitive`, `registration_fee`, `contact_email`, `contact_phone`, `source`.
+
+`scripts/import-events.ts` (merged from main) handles the full CSV → DB import. Run with `pnpm db:import`.
+
+Supabase Storage bucket `covers` already exists (public). `import-events.ts` stores `image_url` from CSV directly as `cover_image_key` (external URL passthrough). A second script is needed to properly re-host images to avoid URL rot.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Insert all 87 CSV rows into the `events` table (skipping or flagging competitive-only rows as appropriate)
-- Fetch each `image_url`, upload to `covers/{uuid}-{filename}`, write `cover_image_key` back to the event row
-- Patch `contact_email`, `contact_phone`, `registration_fee`, `participant_limit` where researchable
-- Manually resolve `image_url` for ~26 events currently missing it
+- ✅ Insert all 100 CSV rows into the `events` table — done via `pnpm db:import`
+- Fetch each external `cover_image_key` URL, upload to `covers/{uuid}-{filename}`, write Storage path back — still pending (task 3)
+- Patch sparse fields (`registration_fee`, `contact_email`, `contact_phone`) where researchable
 
 **Non-Goals:**
-- Schema changes to `events` table
-- Automating ongoing event ingestion (this is a one-shot seed)
-- Importing the extra CSV columns not in the DB schema
+- Schema changes to `events` table (already done in 0005)
+- Automating ongoing event ingestion (one-shot seed)
+- Importing `participant_limit` (no DB column, out of scope)
 
 ## Decisions
 
