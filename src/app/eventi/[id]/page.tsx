@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -60,8 +61,13 @@ export default async function EventDetailPage({
       <div className="card overflow-hidden">
         <div className="relative aspect-[16/9] w-full bg-paper-soft">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt={ev.title} className="h-full w-full object-cover" />
+            <Image
+              src={cover}
+              alt={ev.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[repeating-linear-gradient(45deg,var(--paper),var(--paper)_14px,var(--paper-soft)_14px,var(--paper-soft)_28px)]">
               <span className="font-head text-5xl text-ink-soft">🚲</span>

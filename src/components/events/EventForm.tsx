@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -408,12 +409,15 @@ export default function EventForm({
         </label>
         {coverPreview && (
           <div className="mb-2 overflow-hidden rounded-lg border border-line">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverPreview}
-              alt={t("cover")}
-              className="aspect-[16/9] w-full object-cover"
-            />
+            <div className="relative aspect-[16/9] w-full">
+              <Image
+                src={coverPreview}
+                alt={t("cover")}
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+              />
+            </div>
             <button
               type="button"
               onClick={() => setCoverKey("")}

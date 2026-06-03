@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { approveProposal, rejectProposal } from "@/lib/actions/admin";
@@ -38,10 +39,9 @@ export default function AdminProposalCard({ proposal }: { proposal: ProposalRow 
   return (
     <li className="card overflow-hidden">
       <div className="flex gap-3 p-3">
-        <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-paper-soft">
+        <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-paper-soft">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" />
+            <Image src={cover} alt="" fill sizes="112px" className="object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl">
               🚲
