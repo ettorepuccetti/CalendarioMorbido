@@ -25,7 +25,7 @@ import type { Locale } from "@/i18n/config";
 import { BCP47 } from "@/i18n/config";
 
 // ── Density config ────────────────────────────────────────────────────────
-const D = { laneH: 26, gap: 7, max: 3, headerH: 44, badgeH: 26, pad: 12 };
+const D = { laneH: 18, gap: 2, max: 3, headerH: 36, badgeH: 22, pad: 8 };
 const CELL_H = D.headerH + D.max * (D.laneH + D.gap) + D.badgeH + D.pad;
 const laneTop = (lane: number) => D.headerH + lane * (D.laneH + D.gap);
 
@@ -476,7 +476,7 @@ export default function EventCalendar({
                             day.col < 6
                               ? "1px solid var(--paper-soft)"
                               : "none",
-                          padding: "8px 6px 0",
+                          padding: "5px 4px 0",
                           cursor: total ? "pointer" : "default",
                           background: isOpen
                             ? "oklch(0.95 0.04 250 / 0.25)"
@@ -506,10 +506,10 @@ export default function EventCalendar({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            width: 30,
-                            height: 30,
+                            width: 24,
+                            height: 24,
                             margin: "0 auto",
-                            fontSize: 16,
+                            fontSize: 13,
                             fontWeight: 600,
                             color: day.inMonth
                               ? "var(--ink)"

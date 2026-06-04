@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventRow } from "@/lib/types/db";
+import Image from "next/image";
 import { formatDateRange } from "@/lib/utils/dates";
 import { eventTypeColor } from "@/lib/constants/event-types";
 import { parseIso } from "@/lib/utils/calendar";
+import { coverUrl } from "@/lib/utils/storage";
+import { makePlaceholder } from "@/lib/utils/placeholder";
 
 function numDays(start: string, end: string): number {
   return Math.round((parseIso(end).getTime() - parseIso(start).getTime()) / 86400000) + 1;
@@ -209,6 +212,36 @@ function MobileSheet({
                         gap: 6,
                       }}
                     >
+                      <div
+                        style={{
+                          width: "100%",
+                          height: 90,
+                          borderRadius: 10,
+                          overflow: "hidden",
+                          position: "relative",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {coverUrl(ev.cover_image_key) ? (
+                          <Image
+                            src={coverUrl(ev.cover_image_key)!}
+                            alt={ev.title}
+                            fill
+                            sizes="280px"
+                            style={{ objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              backgroundImage: `url("${makePlaceholder(ev.id, 280, 90)}")`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }}
+                          />
+                        )}
+                      </div>
                       <span
                         style={{
                           fontSize: 13,
@@ -552,13 +585,38 @@ export default function RadialFan({
                 <div
                   style={{
                     width: "100%",
-                    height: 1,
-                    background: "var(--line)",
-                    margin: "6px 0 4px",
+                    height: 76,
+                    borderRadius: 8,
+                    position: "relative",
+                    marginTop: 8,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    pointerEvents: "none",
                   }}
-                />
+                >
+                  {coverUrl(ev.cover_image_key) ? (
+                    <Image
+                      src={coverUrl(ev.cover_image_key)!}
+                      alt={ev.title}
+                      fill
+                      sizes="220px"
+                      style={{ objectFit: "cover", pointerEvents: "none" }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        backgroundImage: `url("${makePlaceholder(ev.id, 220, 80)}")`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
+                </div>
                 <span
-                  style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}
+                  style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", marginTop: 6 }}
                 >
                   {formatDateRange(ev.start_date, ev.end_date, "it")}
                 </span>
