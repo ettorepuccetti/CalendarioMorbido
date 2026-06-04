@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -45,8 +46,13 @@ export default async function EventDetailPage({
       <div className="card overflow-hidden">
         <div className="relative aspect-[16/9] w-full bg-paper-soft">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt={ev.title} className="h-full w-full object-cover" />
+            <Image
+              src={cover}
+              alt={ev.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[repeating-linear-gradient(45deg,var(--paper),var(--paper)_14px,var(--paper-soft)_14px,var(--paper-soft)_28px)]">
               <span className="font-head text-5xl text-ink-soft">🚲</span>
@@ -54,11 +60,16 @@ export default async function EventDetailPage({
           )}
         </div>
         <div className="p-4">
-          <span className="chip mb-2">
-            {isSingleDay(ev.start_date, ev.end_date)
-              ? t("card.oneDay")
-              : t("card.multiDay")}
-          </span>
+          <div className="mb-2 flex flex-wrap gap-2">
+            <span className="chip">
+              {isSingleDay(ev.start_date, ev.end_date)
+                ? t("card.oneDay")
+                : t("card.multiDay")}
+            </span>
+            {ev.event_type && (
+              <span className="chip">{t(`eventTypes.${ev.event_type}`)}</span>
+            )}
+          </div>
           <h1 className="font-head text-4xl font-bold leading-none">{ev.title}</h1>
           <p className="mt-1 font-body text-accent-deep">
             📅 {formatDateRange(ev.start_date, ev.end_date, locale)}
@@ -91,6 +102,73 @@ export default async function EventDetailPage({
         </div>
       </div>
 
+      {(ev.terrain ||
+        ev.distances_km ||
+        ev.elevation_gain_m ||
+        ev.organizer ||
+        ev.circuit) && (
+        <div className="card p-4">
+          <h2 className="mb-2 font-head text-2xl">{t("event.details")}</h2>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-body">
+            {ev.terrain && (
+              <>
+                <dt className="text-ink-soft">{t("event.terrain")}</dt>
+                <dd>{ev.terrain}</dd>
+              </>
+            )}
+            {ev.distances_km && (
+              <>
+                <dt className="text-ink-soft">{t("event.distances")}</dt>
+                <dd>{ev.distances_km} km</dd>
+              </>
+            )}
+            {ev.elevation_gain_m && (
+              <>
+                <dt className="text-ink-soft">{t("event.elevation")}</dt>
+                <dd>{ev.elevation_gain_m} m</dd>
+              </>
+            )}
+            {ev.organizer && (
+              <>
+                <dt className="text-ink-soft">{t("event.organizer")}</dt>
+                <dd>{ev.organizer}</dd>
+              </>
+            )}
+            {ev.circuit && (
+              <>
+                <dt className="text-ink-soft">{t("event.circuit")}</dt>
+                <dd>{ev.circuit}</dd>
+              </>
+            )}
+          </dl>
+        </div>
+      )}
+
+      {(ev.instagram_url || ev.facebook_url) && (
+        <div className="flex gap-2">
+          {ev.instagram_url && (
+            <a
+              href={ev.instagram_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card flex-1 p-3 text-center font-body hover:bg-paper-soft"
+            >
+              📷 Instagram
+            </a>
+          )}
+          {ev.facebook_url && (
+            <a
+              href={ev.facebook_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card flex-1 p-3 text-center font-body hover:bg-paper-soft"
+            >
+              👍 Facebook
+            </a>
+          )}
+        </div>
+      )}
+
       {ev.official_url && (
         <a
           href={ev.official_url}
@@ -102,6 +180,56 @@ export default async function EventDetailPage({
           <span className="text-accent-deep">{t("event.open")}</span>
         </a>
       )}
+
+      {admin &&
+        (ev.bike_type ||
+          ev.competitive ||
+          ev.registration_fee ||
+          ev.contact_email ||
+          ev.contact_phone) && (
+          <div className="card border-2 border-dashed border-line p-4">
+            <h2 className="mb-2 font-head text-2xl">{t("event.adminInfo")}</h2>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-body">
+              {ev.bike_type && (
+                <>
+                  <dt className="text-ink-soft">{t("event.bikeType")}</dt>
+                  <dd>{ev.bike_type}</dd>
+                </>
+              )}
+              {ev.competitive && (
+                <>
+                  <dt className="text-ink-soft">{t("event.competitive")}</dt>
+                  <dd>{ev.competitive}</dd>
+                </>
+              )}
+              {ev.registration_fee && (
+                <>
+                  <dt className="text-ink-soft">{t("event.fee")}</dt>
+                  <dd>{ev.registration_fee}</dd>
+                </>
+              )}
+              {ev.contact_email && (
+                <>
+                  <dt className="text-ink-soft">{t("event.email")}</dt>
+                  <dd>
+                    <a
+                      href={`mailto:${ev.contact_email}`}
+                      className="text-accent-deep underline"
+                    >
+                      {ev.contact_email}
+                    </a>
+                  </dd>
+                </>
+              )}
+              {ev.contact_phone && (
+                <>
+                  <dt className="text-ink-soft">{t("event.phone")}</dt>
+                  <dd>{ev.contact_phone}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+        )}
 
       {admin && (
         <div className="space-y-2">

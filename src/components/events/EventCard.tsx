@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { EventRow } from "@/lib/types/db";
@@ -24,11 +25,12 @@ export default function EventCard({
     <Link href={`/eventi/${event.id}`} className="card group block overflow-hidden">
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-paper-soft">
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={url}
             alt={event.title}
-            className="h-full w-full object-cover transition group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[repeating-linear-gradient(45deg,var(--paper),var(--paper)_12px,var(--paper-soft)_12px,var(--paper-soft)_24px)]">

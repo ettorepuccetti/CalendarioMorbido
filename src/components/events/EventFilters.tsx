@@ -4,15 +4,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { REGIONS } from "@/lib/constants/regions";
+import { EVENT_TYPES } from "@/lib/constants/event-types";
 
 export default function EventFilters() {
   const router = useRouter();
   const params = useSearchParams();
   const [open, setOpen] = useState(false);
   const t = useTranslations("filters");
+  const tTypes = useTranslations("eventTypes");
 
   const region = params.get("region") ?? "";
   const duration = params.get("duration") ?? "";
+  const type = params.get("type") ?? "";
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -21,7 +24,7 @@ export default function EventFilters() {
     router.push(`/?${next.toString()}`);
   }
 
-  const hasFilters = region || duration;
+  const hasFilters = region || duration || type;
 
   return (
     <div className="card mb-4 p-3">
@@ -63,6 +66,22 @@ export default function EventFilters() {
                 {t("multiDay")}
               </button>
             </div>
+          </div>
+
+          <div>
+            <p className="field-label">{t("eventType")}</p>
+            <select
+              className="field-input"
+              value={type}
+              onChange={(e) => update("type", e.target.value)}
+            >
+              <option value="">{t("allTypes")}</option>
+              {EVENT_TYPES.map((et) => (
+                <option key={et} value={et}>
+                  {tTypes(et)}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

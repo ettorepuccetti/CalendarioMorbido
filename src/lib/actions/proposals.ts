@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { REGIONS, type Region } from "@/lib/constants/regions";
+import { EVENT_TYPES, type EventType } from "@/lib/constants/event-types";
 import { readEventContent } from "@/lib/actions/event-fields";
 
 export async function submitProposal(_prev: unknown, formData: FormData) {
@@ -19,6 +20,8 @@ export async function submitProposal(_prev: unknown, formData: FormData) {
 
   if (!REGIONS.includes(content.region as Region))
     return { error: t("invalidRegion") };
+  if (!content.event_type || !EVENT_TYPES.includes(content.event_type as EventType))
+    return { error: t("invalidEventType") };
   if (!content.start_date || !content.end_date)
     return { error: t("datesRequired") };
   if (content.end_date < content.start_date)
