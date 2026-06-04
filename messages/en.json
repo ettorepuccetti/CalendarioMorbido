@@ -49,6 +49,9 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "eventsOf": "Events in {month}",
+    "more": "+{count, plural, one {# more} other {# more}}",
+    "close": "Close",
+    "otherType": "Other",
     "noEventsMonth": "No events this month.",
     "noEventsFilters": "No events match these filters."
   },
