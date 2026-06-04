@@ -25,7 +25,7 @@ Docs and wireframes from the planning phase have been moved to `docs/archive/` �
 ```
 CLAUDE.md
 SETUP.md                             # Step-by-step deploy instructions
-next-steps.md                        # Pending MVP tasks
+docs/out-of-mvp.md                   # Features explicitly out of scope
 
 messages/
   en.json                            # English translations
@@ -123,15 +123,51 @@ SUPABASE_SERVICE_ROLE_KEY   # optional for MVP
 
 ## Out of MVP Scope (ignore for now)
 
-- Map view (MapLibre/MapTiler)
-- Temporal filters on map
+See `docs/out-of-mvp.md` for the canonical list. Summary:
+
+- Map view (MapLibre/MapTiler) and temporal filters on map
 - Recurring events
+- Tour reviews (star ratings, comments)
 - AI-assisted event scraping
-- Social/friend features
+- Social/friend features (user search, shared calendars, visibility permissions)
 
 ## Design
 
 Mobile-first. Warm paper aesthetic (`--paper: oklch(0.985 0.006 95)`), cycling-green hi-vis accent (`--accent: oklch(0.84 0.19 128)`). Fonts: Caveat (headings) + Patrick Hand (body). Italian-language UI with i18n support (next-intl).
+
+## OpenSpec — Spec-Driven Development
+
+This project uses **OpenSpec** (`@fission-ai/openspec` v1.4.0) to track all changes through structured proposals before implementation.
+
+### Workflow
+
+Before implementing any non-trivial change, use the slash commands:
+
+| Command | When to use |
+|---------|------------|
+| `/opsx:propose "description"` | Start any new feature, fix, or refactor |
+| `/opsx:explore` | Explore existing specs and open changes |
+| `/opsx:apply` | Implement an approved proposal |
+| `/opsx:archive` | Close a completed change |
+
+### Directory layout
+
+```
+openspec/
+  specs/          # Current truth — domain specs, data model, API contracts
+  changes/        # Active proposals (one folder per change)
+    <feature>/
+      proposal.md # Intent, requirements, design approach
+      tasks.md    # Granular implementation tasks
+      delta-*.md  # What changes vs current specs (ADDED/MODIFIED/REMOVED)
+```
+
+### Rules
+
+- **Always** run `/opsx:propose` before writing code for a new feature or significant change.
+- Keep `openspec/specs/` updated: after a change is archived, merge its delta specs back.
+- Small bug fixes (single-file, obvious) may skip the proposal; mention it in the commit.
+- Skills are in `.claude/skills/openspec-*/SKILL.md` — OpenSpec auto-loaded them at init.
 
 ## HOW TO MANAGE DOCS
 
@@ -140,3 +176,7 @@ Ignore `docs/archive/` — it contains planning-phase brainstorming not relevant
 ## LANGUAGE
 
 Even if you interact with Claude Code in other languages, always produce code artifacts, documentation, commit messages, and all persisted project information in **English**.
+
+## GIT
+
+Do not add `Co-Authored-By: Claude` or any AI attribution lines to commit messages.

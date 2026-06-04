@@ -12,6 +12,30 @@ export const EVENT_TYPES = [
 
 export type EventType = (typeof EVENT_TYPES)[number];
 
+// Colore associato a ogni tipo di evento (usato nel calendario e nelle liste).
+// `bg`/`fg` puntano alle CSS variables definite in globals.css; vanno applicati
+// via inline-style (i nomi dinamici non sopravviverebbero al purge di Tailwind).
+export type EventTypeColor = { bg: string; fg: string };
+
+export const EVENT_TYPE_COLORS: Record<EventType, EventTypeColor> = {
+  ciclostorica: { bg: "var(--type-ciclostorica)", fg: "var(--paper)" },
+  gravel: { bg: "var(--type-gravel)", fg: "var(--paper)" },
+  cicloturistica: { bg: "var(--type-cicloturistica)", fg: "var(--ink)" },
+  mtb: { bg: "var(--type-mtb)", fg: "var(--paper)" },
+  bikepacking: { bg: "var(--type-bikepacking)", fg: "var(--paper)" },
+  randonnee: { bg: "var(--type-randonnee)", fg: "var(--paper)" },
+};
+
+const DEFAULT_EVENT_TYPE_COLOR: EventTypeColor = {
+  bg: "var(--type-default)",
+  fg: "var(--ink)",
+};
+
+// Colore per un tipo di evento, con fallback neutro per valori mancanti/ignoti.
+export function eventTypeColor(type: EventType | null | undefined): EventTypeColor {
+  return (type && EVENT_TYPE_COLORS[type]) || DEFAULT_EVENT_TYPE_COLOR;
+}
+
 // Mappa i valori grezzi e disomogenei del CSV (docs/events-research) sulle
 // categorie canoniche. Usata dallo script di import. Tutto ciò che non matcha
 // resta non normalizzato (null) e va corretto a mano.

@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { EventRow } from "@/lib/types/db";
-import { isSingleDay, formatDateRange } from "@/lib/utils/dates";
-import { formatRoute } from "@/lib/utils/location";
 import EventCard from "@/components/events/EventCard";
+import DayEventsSheet from "@/components/events/DayEventsSheet";
+import { EVENT_TYPES, eventTypeColor } from "@/lib/constants/event-types";
 import { BCP47, type Locale } from "@/i18n/config";
 
 function pad(n: number): string {
@@ -48,6 +48,12 @@ function assignLanes(segments: Segment[]): Segment[][] {
   return lanes.map((l) => l.items);
 }
 
+// Stile "Google Calendar": righe ad altezza fissa. Numero massimo di corsie
+// mostrate per settimana; le eccedenze diventano "+N altri" per giorno.
+const MAX_LANES = 3;
+const LANE_H = 18; // px, altezza di una corsia/evento
+const LANE_GAP = 2; // px, spazio verticale tra corsie
+
 export default function EventCalendar({
   events,
   savedIds = [],
@@ -57,8 +63,18 @@ export default function EventCalendar({
 }) {
   const saved = useMemo(() => new Set(savedIds), [savedIds]);
   const t = useTranslations("calendar");
+  const tTypes = useTranslations("eventTypes");
   const locale = useLocale() as Locale;
   const weekdays = t.raw("weekdays") as string[];
+
+  // Tipi di evento presenti nel dataset, per la legenda (in ordine canonico).
+  const legend = useMemo(() => {
+    const present = new Set(events.map((e) => e.event_type));
+    return {
+      types: EVENT_TYPES.filter((tp) => present.has(tp)),
+      hasOther: events.some((e) => !e.event_type),
+    };
+  }, [events]);
   const monthFmt = useMemo(
     () =>
       new Intl.DateTimeFormat(BCP47[locale], { month: "long", year: "numeric" }),
@@ -144,16 +160,26 @@ export default function EventCalendar({
         </button>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-3 font-body text-xs text-ink-soft">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-accent" />{" "}
-          {t("oneDay")}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-6 rounded-full bg-accent-alt" />{" "}
-          {t("multiDay")}
-        </span>
+      {/* Legenda per tipo di evento */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-body text-xs text-ink-soft">
+        {legend.types.map((tp) => (
+          <span key={tp} className="flex items-center gap-1">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: eventTypeColor(tp).bg }}
+            />
+            {tTypes(tp)}
+          </span>
+        ))}
+        {legend.hasOther && (
+          <span className="flex items-center gap-1">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: "var(--type-default)" }}
+            />
+            {t("otherType")}
+          </span>
+        )}
         {savedIds.length > 0 && (
           <span className="flex items-center gap-1">
             <span className="text-accent-deep">✓</span> {t("saved")}
@@ -199,6 +225,23 @@ export default function EventCalendar({
             });
           const lanes = assignLanes(segments);
 
+          // Se le corsie superano lo spazio disponibile, l'ultima riga è
+          // riservata ai contatori "+N altri" per giorno.
+          const overflowing = lanes.length > MAX_LANES;
+          const visibleLanes = lanes.slice(
+            0,
+            overflowing ? MAX_LANES - 1 : lanes.length,
+          );
+          const hiddenLanes = lanes.slice(visibleLanes.length);
+          const overflow = Array<number>(7).fill(0);
+          for (const lane of hiddenLanes) {
+            for (const seg of lane) {
+              for (let i = seg.startIdx; i < seg.startIdx + seg.span; i++) {
+                overflow[i] += 1;
+              }
+            }
+          }
+
           return (
             <div key={wi} className="border-b border-line last:border-b-0">
               {/* Numeri dei giorni */}
@@ -210,9 +253,7 @@ export default function EventCalendar({
                   return (
                     <button
                       key={dayStr}
-                      onClick={() =>
-                        setSelected(hasEvents && !isSelected ? dayStr : null)
-                      }
+                      onClick={() => hasEvents && setSelected(dayStr)}
                       className={`flex justify-center pt-1 ${
                         hasEvents ? "cursor-pointer" : "cursor-default"
                       } ${isSelected ? "bg-accent/10" : ""}`}
@@ -229,47 +270,21 @@ export default function EventCalendar({
                 })}
               </div>
 
-              {/* Corsie con pallini (un giorno) e strisce (più giorni) */}
-              <div className="min-h-[0.75rem] space-y-1 px-0.5 pb-1.5 pt-1">
-                {lanes.map((lane, li) => (
-                  <div key={li} className="grid grid-cols-7">
+              {/* Eventi: righe ad altezza fissa con titolo visibile */}
+              <div
+                className="px-0.5 pb-1"
+                style={{ height: MAX_LANES * (LANE_H + LANE_GAP) }}
+              >
+                {visibleLanes.map((lane, li) => (
+                  <div
+                    key={li}
+                    className="grid grid-cols-7"
+                    style={{ height: LANE_H, marginTop: LANE_GAP }}
+                  >
                     {lane.map((seg) => {
-                      const single = isSingleDay(
-                        seg.event.start_date,
-                        seg.event.end_date,
-                      );
                       const isSaved = saved.has(seg.event.id);
-                      const color = single ? "bg-accent" : "bg-accent-alt";
+                      const c = eventTypeColor(seg.event.event_type);
                       const ring = isSaved ? "ring-1 ring-ink/50" : "";
-
-                      if (single) {
-                        // Pallino centrato nel giorno dell'evento.
-                        return (
-                          <Link
-                            key={seg.event.id}
-                            href={`/eventi/${seg.event.id}`}
-                            title={seg.event.title}
-                            aria-label={seg.event.title}
-                            style={{ gridColumn: `${seg.startIdx + 1} / span 1` }}
-                            className="flex items-center justify-center hover:brightness-95"
-                          >
-                            <span
-                              className={`h-2.5 w-2.5 rounded-full ${color} ${ring}`}
-                            />
-                          </Link>
-                        );
-                      }
-
-                      // Striscia centrata sui giorni: il corpo dritto termina al
-                      // centro del giorno d'inizio/fine (sotto il numero) e il
-                      // semicerchio parte da lì estendendosi verso l'esterno di un
-                      // raggio (= metà altezza della striscia). Dove l'evento
-                      // prosegue nella settimana adiacente l'estremo è piatto e a
-                      // filo del bordo della cella (continuazione).
-                      // Mezza cella = 100/(2*span) % della larghezza del segmento;
-                      // sottraggo il raggio del cappuccio per allungare la pillola.
-                      const cap = "0.3125rem"; // raggio = h-2.5 / 2
-                      const half = `calc(${100 / (2 * seg.span)}% - ${cap})`;
                       return (
                         <Link
                           key={seg.event.id}
@@ -278,23 +293,46 @@ export default function EventCalendar({
                           aria-label={seg.event.title}
                           style={{
                             gridColumn: `${seg.startIdx + 1} / span ${seg.span}`,
+                            marginLeft: seg.continuesLeft ? 0 : 1,
+                            marginRight: seg.continuesRight ? 0 : 1,
+                            backgroundColor: c.bg,
+                            color: c.fg,
                           }}
-                          className="flex items-center hover:brightness-95"
+                          className={`flex min-w-0 items-center overflow-hidden px-1 font-body text-[11px] leading-none hover:brightness-110 ${ring} ${
+                            seg.continuesLeft ? "rounded-l-none" : "rounded-l"
+                          } ${seg.continuesRight ? "rounded-r-none" : "rounded-r"}`}
                         >
-                          <span
-                            style={{
-                              marginLeft: seg.continuesLeft ? 0 : half,
-                              marginRight: seg.continuesRight ? 0 : half,
-                            }}
-                            className={`h-2.5 flex-1 ${color} ${ring} ${
-                              seg.continuesLeft ? "" : "rounded-l-full"
-                            } ${seg.continuesRight ? "" : "rounded-r-full"}`}
-                          />
+                          {isSaved && <span className="mr-0.5 shrink-0">✓</span>}
+                          <span className="truncate">{seg.event.title}</span>
                         </Link>
                       );
                     })}
                   </div>
                 ))}
+
+                {/* Riga "+N altri" per i giorni con eventi eccedenti */}
+                {overflowing && (
+                  <div
+                    className="grid grid-cols-7"
+                    style={{ height: LANE_H, marginTop: LANE_GAP }}
+                  >
+                    {cells.map(({ dayStr }, i) =>
+                      overflow[i] > 0 ? (
+                        <button
+                          key={dayStr}
+                          onClick={() => setSelected(dayStr)}
+                          className="flex items-center px-1 font-body text-[11px] leading-none text-ink-soft hover:text-ink"
+                        >
+                          <span className="truncate">
+                            {t("more", { count: overflow[i] })}
+                          </span>
+                        </button>
+                      ) : (
+                        <div key={dayStr} />
+                      ),
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -323,50 +361,19 @@ export default function EventCalendar({
         </div>
       )}
 
-      {/* Dettaglio giorno selezionato */}
-      {selected && selectedEvents.length > 0 && (
-        <ul className="space-y-2">
-          {selectedEvents.map((e) => (
-            <li key={e.id}>
-              <Link
-                href={`/eventi/${e.id}`}
-                className="card flex items-center gap-3 p-3 hover:bg-paper-soft"
-              >
-                <span
-                  className={`inline-block h-3 w-3 shrink-0 rounded-full ${
-                    isSingleDay(e.start_date, e.end_date)
-                      ? "bg-accent"
-                      : "bg-accent-alt"
-                  }`}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-head text-lg leading-tight">
-                    {e.title}
-                    {saved.has(e.id) && (
-                      <span
-                        className="ml-1 text-accent-deep"
-                        title={t("savedTitle")}
-                      >
-                        ✓
-                      </span>
-                    )}
-                  </span>
-                  <span className="block font-body text-sm text-ink-soft">
-                    {formatDateRange(e.start_date, e.end_date, locale)} ·{" "}
-                    {formatRoute(e)}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-
       {events.length === 0 && (
         <p className="py-8 text-center font-body text-ink-soft">
           {t("noEventsFilters")}
         </p>
       )}
+
+      {/* Dettaglio giorno selezionato: bottom sheet / dialog */}
+      <DayEventsSheet
+        day={selected}
+        events={selectedEvents}
+        savedIds={saved}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }
