@@ -2,8 +2,6 @@
 
 ## MISC
 
-- fix immagini
-
 ## PUBBLICO
 
 - quando ci sono troppi eventi in uno stesso giorno devo aggregarli/collassarli
