@@ -1,53 +1,236 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import Image from "next/image";
 import type { EventRow } from "@/lib/types/db";
-import { isSingleDay, formatDateRange } from "@/lib/utils/dates";
-import { formatRoute } from "@/lib/utils/location";
-import EventCard from "@/components/events/EventCard";
-import { BCP47, type Locale } from "@/i18n/config";
+import { coverUrl } from "@/lib/utils/storage";
+import { formatDateRange, isSingleDay } from "@/lib/utils/dates";
+import { formatPlace } from "@/lib/utils/location";
+import {
+  buildWeeks,
+  packWeek,
+  eventsInMonth,
+  eventsOnDay,
+  todayIso,
+  type CalDay,
+  type PackedBar,
+} from "@/lib/utils/calendar";
+import { makePlaceholder } from "@/lib/utils/placeholder";
+import RadialFan, { type FanAnchor } from "@/components/events/RadialFan";
+import type { Locale } from "@/i18n/config";
+import { BCP47 } from "@/i18n/config";
 
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
+// ── Density config ────────────────────────────────────────────────────────
+const D = { laneH: 26, gap: 7, max: 3, headerH: 44, badgeH: 26, pad: 12 };
+const CELL_H = D.headerH + D.max * (D.laneH + D.gap) + D.badgeH + D.pad;
+const laneTop = (lane: number) => D.headerH + lane * (D.laneH + D.gap);
+
+// ── Bar component ─────────────────────────────────────────────────────────
+function Bar({
+  b,
+  selected,
+  dimmed,
+  hovIso,
+}: {
+  b: PackedBar;
+  selected: boolean;
+  dimmed: boolean;
+  hovIso: string | null;
+}) {
+  const span = b.endCol - b.startCol + 1;
+  const left = `calc(${(b.startCol / 7) * 100}% + ${b.continuesLeft ? 0 : 4}px)`;
+  const width = `calc(${(span / 7) * 100}% - ${(b.continuesLeft ? 0 : 4) + (b.continuesRight ? 0 : 4)}px)`;
+  const color = b.single ? "var(--accent)" : "var(--accent-alt)";
+  const cls = [
+    "cal-bar",
+    b.single ? "single" : "multi",
+    b.continuesLeft ? "cl" : "",
+    b.continuesRight ? "cr" : "",
+    selected ? "sel" : "",
+    dimmed ? "dim" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className={cls}
+      style={
+        {
+          left,
+          width,
+          top: laneTop(b.lane),
+          height: D.laneH,
+          ["--c"]: color,
+          fontSize: 12.5,
+        } as React.CSSProperties
+      }
+      title={b.ev.title}
+    >
+      {b.single && <span className="cal-bar-dot" />}
+      <span className="cal-bar-label">{b.ev.title}</span>
+      {b.continuesRight && <span className="cal-bar-arrow">→</span>}
+    </div>
+  );
 }
 
-// "YYYY-MM-DD" da componenti locali (m è 0-indexed).
-function ymd(y: number, m: number, d: number): string {
-  return `${y}-${pad(m + 1)}-${pad(d)}`;
+// ── Slideshow card ────────────────────────────────────────────────────────
+function SlideCard({
+  ev,
+  saved,
+  selected,
+  onClick,
+  cardRef,
+}: {
+  ev: EventRow;
+  saved: boolean;
+  selected: boolean;
+  onClick: () => void;
+  cardRef: (el: HTMLElement | null) => void;
+}) {
+  const locale = useLocale() as Locale;
+  const t = useTranslations("calendar");
+  const single = isSingleDay(ev.start_date, ev.end_date);
+  const img = coverUrl(ev.cover_image_key);
+  const fallback = makePlaceholder(ev.id);
+  const city = formatPlace(ev.start_comune, ev.start_provincia);
+
+  return (
+    <article
+      ref={cardRef}
+      className={`ecard${selected ? " ecard-sel" : ""}`}
+      style={
+        {
+          flex: "0 0 300px",
+          scrollSnapAlign: "start",
+          background: "var(--paper)",
+          border: `1px solid ${selected ? (single ? "var(--accent)" : "var(--accent-alt)") : "var(--line)"}`,
+          borderRadius: 20,
+          overflow: "hidden",
+          cursor: "pointer",
+          transition: "transform .2s, box-shadow .2s, border-color .2s",
+          boxShadow: selected
+            ? `0 0 0 2px ${single ? "var(--accent)" : "var(--accent-alt)"}, 0 16px 38px rgba(0,0,0,.12)`
+            : "0 2px 8px rgba(0,0,0,.04)",
+          transform: selected ? "translateY(-3px)" : undefined,
+        } as React.CSSProperties
+      }
+      onClick={onClick}
+    >
+      {/* Image */}
+      <div
+        style={{
+          position: "relative",
+          height: 172,
+          backgroundImage: img ? undefined : `url("${fallback}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: "var(--paper-soft)",
+        }}
+      >
+        {img && (
+          <Image
+            src={img}
+            alt={ev.title}
+            fill
+            sizes="300px"
+            className="object-cover"
+          />
+        )}
+        <span
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            padding: "5px 11px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,.90)",
+            backdropFilter: "blur(4px)",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--ink)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {single ? t("oneDay") : t("multiDay")}
+        </span>
+        {saved && (
+          <span
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              padding: "5px 11px",
+              borderRadius: 999,
+              background: "var(--accent)",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--ink)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ✓
+          </span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "14px 16px 18px" }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            marginBottom: 5,
+            color: single ? "var(--accent-deep)" : "var(--accent-alt-deep)",
+          }}
+        >
+          {formatDateRange(ev.start_date, ev.end_date, locale)}
+        </div>
+        <h3
+          className="font-head"
+          style={{
+            fontSize: 19,
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.12,
+            margin: "0 0 10px",
+          }}
+        >
+          {ev.title}
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--ink-soft)",
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50% 50% 50% 0",
+              transform: "rotate(-45deg)",
+              background: "#e0573c",
+              flexShrink: 0,
+              boxShadow: "inset 0 0 0 2px rgba(255,255,255,.6)",
+              display: "inline-block",
+            }}
+          />
+          {city} · {ev.region}
+        </div>
+      </div>
+    </article>
+  );
 }
 
-function occursOn(ev: EventRow, dayStr: string): boolean {
-  return ev.start_date <= dayStr && dayStr <= ev.end_date;
-}
-
-type Cell = { date: Date; dayStr: string; inMonth: boolean };
-
-// Posizionamento di un evento all'interno di una settimana (7 celle lun→dom).
-type Segment = {
-  event: EventRow;
-  startIdx: number; // 0-6
-  span: number;
-  continuesLeft: boolean;
-  continuesRight: boolean;
-};
-
-// Assegna i segmenti a corsie (lane) evitando sovrapposizioni di colonne.
-function assignLanes(segments: Segment[]): Segment[][] {
-  const lanes: { lastEnd: number; items: Segment[] }[] = [];
-  for (const seg of segments) {
-    let lane = lanes.find((l) => seg.startIdx > l.lastEnd);
-    if (!lane) {
-      lane = { lastEnd: -1, items: [] };
-      lanes.push(lane);
-    }
-    lane.items.push(seg);
-    lane.lastEnd = seg.startIdx + seg.span - 1;
-  }
-  return lanes.map((l) => l.items);
-}
-
+// ── Main component ────────────────────────────────────────────────────────
 export default function EventCalendar({
   events,
   savedIds = [],
@@ -58,75 +241,112 @@ export default function EventCalendar({
   const saved = useMemo(() => new Set(savedIds), [savedIds]);
   const t = useTranslations("calendar");
   const locale = useLocale() as Locale;
-  const weekdays = t.raw("weekdays") as string[];
+  const router = useRouter();
+
   const monthFmt = useMemo(
     () =>
       new Intl.DateTimeFormat(BCP47[locale], { month: "long", year: "numeric" }),
     [locale],
   );
 
-  // Mese iniziale: quello del primo evento futuro, altrimenti il mese corrente.
-  const today = new Date();
-  const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
+  const today = todayIso();
+
+  // Initial month: first month with a future/current event, else today.
   const initial = useMemo(() => {
-    const next = events.find((e) => e.end_date >= todayStr) ?? events[0];
-    const ref = next ? new Date(next.start_date) : today;
+    const next = events.find((e) => e.end_date >= today) ?? events[0];
+    const ref = next ? new Date(next.start_date + "T00:00:00") : new Date();
     return { year: ref.getFullYear(), month: ref.getMonth() };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [{ year, month }, setView] = useState(initial);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [ym, setYm] = useState(initial);
+  const [hovIso, setHovIso] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [fan, setFan] = useState<{
+    day: CalDay;
+    anchor: FanAnchor;
+    events: EventRow[];
+  } | null>(null);
 
-  function shiftMonth(delta: number) {
-    const d = new Date(year, month + delta, 1);
-    setView({ year: d.getFullYear(), month: d.getMonth() });
-    setSelected(null);
-  }
+  const weeks = useMemo(
+    () => buildWeeks(ym.year, ym.month),
+    [ym.year, ym.month],
+  );
 
-  // Costruzione delle settimane (lun→dom).
-  const weeks = useMemo(() => {
-    const first = new Date(year, month, 1);
-    const startOffset = (first.getDay() + 6) % 7; // lunedì = 0
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const monthEvents = useMemo(
+    () => eventsInMonth(events, ym.year, ym.month),
+    [events, ym.year, ym.month],
+  );
 
-    const cells: Cell[] = [];
-    for (let i = 0; i < totalCells; i++) {
-      const date = new Date(year, month, 1 - startOffset + i);
-      cells.push({
-        date,
-        dayStr: ymd(date.getFullYear(), date.getMonth(), date.getDate()),
-        inMonth: date.getMonth() === month,
-      });
+  const packed = useMemo(
+    () => weeks.map((w) => packWeek(w, events)),
+    [weeks, events],
+  );
+
+  const monthLabel = monthFmt.format(new Date(ym.year, ym.month, 1));
+
+  // Close fan on resize.
+  useEffect(() => {
+    if (!fan) return;
+    const close = () => setFan(null);
+    window.addEventListener("resize", close);
+    return () => window.removeEventListener("resize", close);
+  }, [fan]);
+
+  // Lock body scroll while fan is open.
+  useEffect(() => {
+    document.body.style.overflow = fan ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [fan]);
+
+  const nav = useCallback((delta: number) => {
+    setFan(null);
+    setYm((s) => {
+      const m = s.month + delta;
+      return { year: s.year + Math.floor(m / 12), month: ((m % 12) + 12) % 12 };
+    });
+  }, []);
+
+  const onCellClick = useCallback(
+    (day: CalDay, rect: DOMRect) => {
+      const dayEvs = eventsOnDay(events, day.iso);
+      if (dayEvs.length === 0) return;
+      if (dayEvs.length === 1) {
+        router.push(`/eventi/${dayEvs[0]!.id}`);
+        return;
+      }
+      setFan({ day, anchor: rect, events: dayEvs });
+    },
+    [events, router],
+  );
+
+  // ── Slideshow scroll-to-selected ───────────────────────────────────────
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const card = cardRefs.current[selectedId];
+    const sc = scrollerRef.current;
+    if (card && sc) {
+      sc.scrollTo({ left: card.offsetLeft - 20, behavior: "smooth" });
     }
-    const rows: Cell[][] = [];
-    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
-    return rows;
-  }, [year, month]);
+  }, [selectedId]);
 
-  // Eventi che ricadono (anche parzialmente) nel mese visualizzato.
-  const monthEvents = useMemo(() => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthStart = ymd(year, month, 1);
-    const monthEnd = ymd(year, month, daysInMonth);
-    return events
-      .filter((e) => e.start_date <= monthEnd && e.end_date >= monthStart)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-  }, [events, year, month]);
+  const nudge = (dir: number) => {
+    scrollerRef.current?.scrollTo({
+      left: (scrollerRef.current.scrollLeft ?? 0) + dir * 340,
+      behavior: "smooth",
+    });
+  };
 
-  const monthLabel = monthFmt.format(new Date(year, month, 1));
-
-  const selectedEvents = selected
-    ? events.filter((e) => occursOn(e, selected))
-    : [];
-
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-3">
-      {/* Header mese + navigazione */}
+    <div className="space-y-4">
+      {/* Month header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => shiftMonth(-1)}
+          onClick={() => nav(-1)}
           className="chip"
           aria-label={t("prevMonth")}
         >
@@ -136,7 +356,7 @@ export default function EventCalendar({
           {monthLabel}
         </h2>
         <button
-          onClick={() => shiftMonth(1)}
+          onClick={() => nav(1)}
           className="chip"
           aria-label={t("nextMonth")}
         >
@@ -144,228 +364,315 @@ export default function EventCalendar({
         </button>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-3 font-body text-xs text-ink-soft">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-accent" />{" "}
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 font-body text-sm text-ink-soft">
+        <span className="flex items-center gap-2">
+          <span
+            style={{
+              display: "inline-block",
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: "var(--accent)",
+            }}
+          />
           {t("oneDay")}
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-6 rounded-full bg-accent-alt" />{" "}
+        <span className="flex items-center gap-2">
+          <span
+            style={{
+              display: "inline-block",
+              width: 28,
+              height: 10,
+              borderRadius: 999,
+              background: "var(--accent-alt)",
+            }}
+          />
           {t("multiDay")}
         </span>
-        {savedIds.length > 0 && (
-          <span className="flex items-center gap-1">
-            <span className="text-accent-deep">✓</span> {t("saved")}
-          </span>
-        )}
+        <span className="ml-auto hidden text-xs sm:block">
+          Tocca un giorno affollato per il ventaglio
+        </span>
       </div>
 
-      {/* Griglia calendario */}
-      <div className="card overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-line bg-paper-soft">
-          {weekdays.map((w) => (
+      {/* Calendar grid */}
+      <div
+        style={{
+          border: "1px solid var(--line)",
+          borderRadius: 18,
+          overflow: "hidden",
+          background: "var(--paper)",
+          boxShadow: "0 1px 0 rgba(0,0,0,.02)",
+        }}
+      >
+        {/* Weekday headers */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7,1fr)",
+            background: "var(--paper-soft)",
+            borderBottom: "1px solid var(--line)",
+          }}
+        >
+          {(t.raw("weekdays") as string[]).map((wd) => (
             <div
-              key={w}
-              className="py-1.5 text-center font-body text-xs text-ink-soft"
+              key={wd}
+              style={{
+                padding: "12px 8px",
+                color: "var(--ink-soft)",
+                fontSize: 13,
+                fontWeight: 500,
+                textAlign: "center",
+              }}
             >
-              {w}
+              {wd}
             </div>
           ))}
         </div>
 
-        {weeks.map((cells, wi) => {
-          const weekStart = cells[0].dayStr;
-          const weekEnd = cells[6].dayStr;
-          const segments: Segment[] = events
-            .filter((e) => e.start_date <= weekEnd && e.end_date >= weekStart)
-            .sort(
-              (a, b) =>
-                a.start_date.localeCompare(b.start_date) ||
-                b.end_date.localeCompare(a.end_date),
-            )
-            .map((e) => {
-              const f = cells.findIndex((c) => c.dayStr === e.start_date);
-              const l = cells.findIndex((c) => c.dayStr === e.end_date);
-              const startIdx = f === -1 ? 0 : f;
-              const endIdx = l === -1 ? 6 : l;
-              return {
-                event: e,
-                startIdx,
-                span: endIdx - startIdx + 1,
-                continuesLeft: e.start_date < weekStart,
-                continuesRight: e.end_date > weekEnd,
-              };
-            });
-          const lanes = assignLanes(segments);
+        {/* Weeks */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {weeks.map((week, wi) => {
+            const placed = packed[wi]!;
 
-          return (
-            <div key={wi} className="border-b border-line last:border-b-0">
-              {/* Numeri dei giorni */}
-              <div className="grid grid-cols-7">
-                {cells.map(({ date, dayStr, inMonth }) => {
-                  const isToday = dayStr === todayStr;
-                  const isSelected = dayStr === selected;
-                  const hasEvents = events.some((e) => occursOn(e, dayStr));
-                  return (
-                    <button
-                      key={dayStr}
-                      onClick={() =>
-                        setSelected(hasEvents && !isSelected ? dayStr : null)
-                      }
-                      className={`flex justify-center pt-1 ${
-                        hasEvents ? "cursor-pointer" : "cursor-default"
-                      } ${isSelected ? "bg-accent/10" : ""}`}
-                    >
-                      <span
-                        className={`flex h-6 w-6 items-center justify-center rounded-full font-body text-sm ${
-                          inMonth ? "" : "text-ink-soft/50"
-                        } ${isToday ? "bg-ink text-paper" : ""}`}
+            // Count hidden events per day (lanes ≥ max)
+            const hiddenByDay: Record<number, number> = {};
+            const totalByDay: Record<number, number> = {};
+            for (const b of placed) {
+              for (let c = b.startCol; c <= b.endCol; c++) {
+                totalByDay[c] = (totalByDay[c] ?? 0) + 1;
+                if (b.lane >= D.max) hiddenByDay[c] = (hiddenByDay[c] ?? 0) + 1;
+              }
+            }
+
+            return (
+              <div
+                key={wi}
+                style={{
+                  position: "relative",
+                  height: CELL_H,
+                  borderBottom:
+                    wi < weeks.length - 1 ? "1px solid var(--line)" : "none",
+                }}
+              >
+                {/* Day cells */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(7,1fr)",
+                    height: "100%",
+                  }}
+                >
+                  {week.days.map((day) => {
+                    const isToday = day.iso === today;
+                    const total = totalByDay[day.col] ?? 0;
+                    const hidden = hiddenByDay[day.col] ?? 0;
+                    const isHov = hovIso === day.iso;
+                    const isOpen = fan?.day.iso === day.iso;
+
+                    return (
+                      <div
+                        key={day.iso}
+                        style={{
+                          position: "relative",
+                          borderRight:
+                            day.col < 6
+                              ? "1px solid var(--paper-soft)"
+                              : "none",
+                          padding: "8px 6px 0",
+                          cursor: total ? "pointer" : "default",
+                          background: isOpen
+                            ? "oklch(0.95 0.04 250 / 0.25)"
+                            : isHov && total
+                              ? "var(--paper-soft)"
+                              : day.inMonth
+                                ? undefined
+                                : "repeating-linear-gradient(135deg,var(--paper),var(--paper) 6px,var(--paper-soft) 6px,var(--paper-soft) 12px)",
+                          transition: "background .15s",
+                        }}
+                        data-daycell=""
+                        onMouseEnter={() => setHovIso(day.iso)}
+                        onMouseLeave={() =>
+                          setHovIso((v) => (v === day.iso ? null : v))
+                        }
+                        onClick={(e) =>
+                          total &&
+                          onCellClick(
+                            day,
+                            e.currentTarget.getBoundingClientRect(),
+                          )
+                        }
                       >
-                        {date.getDate()}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Corsie con pallini (un giorno) e strisce (più giorni) */}
-              <div className="min-h-[0.75rem] space-y-1 px-0.5 pb-1.5 pt-1">
-                {lanes.map((lane, li) => (
-                  <div key={li} className="grid grid-cols-7">
-                    {lane.map((seg) => {
-                      const single = isSingleDay(
-                        seg.event.start_date,
-                        seg.event.end_date,
-                      );
-                      const isSaved = saved.has(seg.event.id);
-                      const color = single ? "bg-accent" : "bg-accent-alt";
-                      const ring = isSaved ? "ring-1 ring-ink/50" : "";
-
-                      if (single) {
-                        // Pallino centrato nel giorno dell'evento.
-                        return (
-                          <Link
-                            key={seg.event.id}
-                            href={`/eventi/${seg.event.id}`}
-                            title={seg.event.title}
-                            aria-label={seg.event.title}
-                            style={{ gridColumn: `${seg.startIdx + 1} / span 1` }}
-                            className="flex items-center justify-center hover:brightness-95"
-                          >
-                            <span
-                              className={`h-2.5 w-2.5 rounded-full ${color} ${ring}`}
-                            />
-                          </Link>
-                        );
-                      }
-
-                      // Striscia centrata sui giorni: il corpo dritto termina al
-                      // centro del giorno d'inizio/fine (sotto il numero) e il
-                      // semicerchio parte da lì estendendosi verso l'esterno di un
-                      // raggio (= metà altezza della striscia). Dove l'evento
-                      // prosegue nella settimana adiacente l'estremo è piatto e a
-                      // filo del bordo della cella (continuazione).
-                      // Mezza cella = 100/(2*span) % della larghezza del segmento;
-                      // sottraggo il raggio del cappuccio per allungare la pillola.
-                      const cap = "0.3125rem"; // raggio = h-2.5 / 2
-                      const half = `calc(${100 / (2 * seg.span)}% - ${cap})`;
-                      return (
-                        <Link
-                          key={seg.event.id}
-                          href={`/eventi/${seg.event.id}`}
-                          title={seg.event.title}
-                          aria-label={seg.event.title}
+                        {/* Day number */}
+                        <div
                           style={{
-                            gridColumn: `${seg.startIdx + 1} / span ${seg.span}`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 30,
+                            height: 30,
+                            margin: "0 auto",
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: day.inMonth
+                              ? "var(--ink)"
+                              : "var(--ink-soft)",
+                            borderRadius: isToday ? "50%" : undefined,
+                            background: isToday ? "var(--ink)" : undefined,
+                            ...(isToday ? { color: "var(--paper)" } : {}),
                           }}
-                          className="flex items-center hover:brightness-95"
                         >
-                          <span
-                            style={{
-                              marginLeft: seg.continuesLeft ? 0 : half,
-                              marginRight: seg.continuesRight ? 0 : half,
+                          {day.dayNum}
+                        </div>
+
+                        {/* +N overflow badge */}
+                        {hidden > 0 && (
+                          <button
+                            className="cal-badge"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCellClick(
+                                day,
+                                e.currentTarget
+                                  .closest("[data-daycell]")!
+                                  .getBoundingClientRect(),
+                              );
                             }}
-                            className={`h-2.5 flex-1 ${color} ${ring} ${
-                              seg.continuesLeft ? "" : "rounded-l-full"
-                            } ${seg.continuesRight ? "" : "rounded-r-full"}`}
-                          />
-                        </Link>
+                          >
+                            <span className="cal-badge-fan">
+                              <i />
+                              <i />
+                              <i />
+                            </span>
+                            +{hidden}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bar layer */}
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {placed
+                    .filter((b) => b.lane < D.max)
+                    .map((b, i) => {
+                      const onHovDay =
+                        hovIso != null &&
+                        b.ev.start_date <= hovIso &&
+                        b.ev.end_date >= hovIso;
+                      return (
+                        <Bar
+                          key={`${b.ev.id}-${i}`}
+                          b={b}
+                          selected={selectedId === b.ev.id}
+                          dimmed={hovIso != null && !onHovDay}
+                          hovIso={hovIso}
+                        />
                       );
                     })}
-                  </div>
-                ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Card del mese a scorrimento orizzontale */}
-      {events.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="font-head text-lg font-semibold capitalize">
-            {t("eventsOf", { month: monthLabel })}
-          </h3>
-          {monthEvents.length > 0 ? (
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-0.5 pb-2 pt-1">
-              {monthEvents.map((e) => (
-                <div key={e.id} className="w-64 shrink-0 snap-start sm:w-72">
-                  <EventCard event={e} saved={saved.has(e.id)} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="font-body text-sm text-ink-soft">
-              {t("noEventsMonth")}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Dettaglio giorno selezionato */}
-      {selected && selectedEvents.length > 0 && (
-        <ul className="space-y-2">
-          {selectedEvents.map((e) => (
-            <li key={e.id}>
-              <Link
-                href={`/eventi/${e.id}`}
-                className="card flex items-center gap-3 p-3 hover:bg-paper-soft"
+      {/* Slideshow */}
+      {monthEvents.length > 0 && (
+        <section style={{ marginTop: 36 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}
+          >
+            <h2
+              className="font-head"
+              style={{
+                fontSize: "clamp(20px,2.6vw,28px)",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                margin: 0,
+                textTransform: "capitalize",
+              }}
+            >
+              {t("eventsOf", { month: monthLabel })}
+            </h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => nudge(-1)}
+                className="chip"
+                aria-label="Precedenti"
               >
-                <span
-                  className={`inline-block h-3 w-3 shrink-0 rounded-full ${
-                    isSingleDay(e.start_date, e.end_date)
-                      ? "bg-accent"
-                      : "bg-accent-alt"
-                  }`}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-head text-lg leading-tight">
-                    {e.title}
-                    {saved.has(e.id) && (
-                      <span
-                        className="ml-1 text-accent-deep"
-                        title={t("savedTitle")}
-                      >
-                        ✓
-                      </span>
-                    )}
-                  </span>
-                  <span className="block font-body text-sm text-ink-soft">
-                    {formatDateRange(e.start_date, e.end_date, locale)} ·{" "}
-                    {formatRoute(e)}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                ←
+              </button>
+              <button
+                onClick={() => nudge(1)}
+                className="chip"
+                aria-label="Successivi"
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={scrollerRef}
+            style={{
+              display: "flex",
+              gap: 20,
+              overflowX: "auto",
+              padding: "4px 2px 16px",
+              scrollSnapType: "x mandatory",
+              scrollbarWidth: "thin",
+            }}
+          >
+            {monthEvents.map((ev) => (
+              <SlideCard
+                key={ev.id}
+                ev={ev}
+                saved={saved.has(ev.id)}
+                selected={selectedId === ev.id}
+                cardRef={(el) => {
+                  cardRefs.current[ev.id] = el;
+                }}
+                onClick={() => {
+                  if (selectedId === ev.id) {
+                    router.push(`/eventi/${ev.id}`);
+                  } else {
+                    setSelectedId(ev.id);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {events.length === 0 && (
         <p className="py-8 text-center font-body text-ink-soft">
           {t("noEventsFilters")}
         </p>
+      )}
+
+      {/* Radial fan */}
+      {fan && (
+        <RadialFan
+          key={fan.day.iso}
+          anchor={fan.anchor}
+          day={fan.day}
+          events={fan.events}
+          onClose={() => setFan(null)}
+        />
       )}
     </div>
   );
