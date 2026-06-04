@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import type { EventRow } from "@/lib/types/db";
 import { formatDateRange } from "@/lib/utils/dates";
 import { eventTypeColor } from "@/lib/constants/event-types";
+import { parseIso } from "@/lib/utils/calendar";
+
+function numDays(start: string, end: string): number {
+  return Math.round((parseIso(end).getTime() - parseIso(start).getTime()) / 86400000) + 1;
+}
 
 export type FanAnchor = {
   left: number;
@@ -156,14 +161,24 @@ function MobileSheet({
               >
                 <span
                   style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
+                    minWidth: 28,
+                    height: 20,
+                    padding: "0 6px",
+                    borderRadius: 999,
                     background: tc.bg,
-                    marginTop: 5,
+                    color: tc.fg,
+                    marginTop: 2,
                     flexShrink: 0,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    letterSpacing: "-0.02em",
                   }}
-                />
+                >
+                  {numDays(ev.start_date, ev.end_date)}g
+                </span>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div
                     style={{
@@ -486,16 +501,26 @@ export default function RadialFan({
             <span
               style={{
                 position: "absolute",
-                top: -6,
-                left: -6,
-                width: 16,
-                height: 16,
-                borderRadius: "50%",
+                top: -8,
+                left: -8,
+                minWidth: 20,
+                height: 20,
+                padding: "0 5px",
+                borderRadius: 999,
                 background: tc.bg,
-                border: "3px solid var(--paper)",
+                color: tc.fg,
+                border: "2.5px solid var(--paper)",
                 boxShadow: "0 2px 6px rgba(0,0,0,.18)",
+                fontSize: 10,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                letterSpacing: "-0.02em",
               }}
-            />
+            >
+              {numDays(ev.start_date, ev.end_date)}g
+            </span>
             <span
               style={{
                 fontSize: 13.5,
