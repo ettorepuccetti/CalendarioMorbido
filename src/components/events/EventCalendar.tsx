@@ -19,6 +19,7 @@ import {
   type PackedBar,
 } from "@/lib/utils/calendar";
 import { makePlaceholder } from "@/lib/utils/placeholder";
+import { eventTypeColor } from "@/lib/constants/event-types";
 import RadialFan, { type FanAnchor } from "@/components/events/RadialFan";
 import type { Locale } from "@/i18n/config";
 import { BCP47 } from "@/i18n/config";
@@ -43,10 +44,10 @@ function Bar({
   const span = b.endCol - b.startCol + 1;
   const left = `calc(${(b.startCol / 7) * 100}% + ${b.continuesLeft ? 0 : 4}px)`;
   const width = `calc(${(span / 7) * 100}% - ${(b.continuesLeft ? 0 : 4) + (b.continuesRight ? 0 : 4)}px)`;
-  const color = b.single ? "var(--accent)" : "var(--accent-alt)";
+  const typeColor = eventTypeColor(b.ev.event_type);
   const cls = [
     "cal-bar",
-    b.single ? "single" : "multi",
+    "multi",
     b.continuesLeft ? "cl" : "",
     b.continuesRight ? "cr" : "",
     selected ? "sel" : "",
@@ -64,7 +65,8 @@ function Bar({
           width,
           top: laneTop(b.lane),
           height: D.laneH,
-          ["--c"]: color,
+          ["--c"]: typeColor.bg,
+          color: typeColor.fg,
           fontSize: 12.5,
         } as React.CSSProperties
       }
@@ -97,6 +99,7 @@ function SlideCard({
   const img = coverUrl(ev.cover_image_key);
   const fallback = makePlaceholder(ev.id);
   const city = formatPlace(ev.start_comune, ev.start_provincia);
+  const typeColor = eventTypeColor(ev.event_type);
 
   return (
     <article
@@ -107,13 +110,13 @@ function SlideCard({
           flex: "0 0 300px",
           scrollSnapAlign: "start",
           background: "var(--paper)",
-          border: `1px solid ${selected ? (single ? "var(--accent)" : "var(--accent-alt)") : "var(--line)"}`,
+          border: `1px solid ${selected ? typeColor.bg : "var(--line)"}`,
           borderRadius: 20,
           overflow: "hidden",
           cursor: "pointer",
           transition: "transform .2s, box-shadow .2s, border-color .2s",
           boxShadow: selected
-            ? `0 0 0 2px ${single ? "var(--accent)" : "var(--accent-alt)"}, 0 16px 38px rgba(0,0,0,.12)`
+            ? `0 0 0 2px ${typeColor.bg}, 0 16px 38px rgba(0,0,0,.12)`
             : "0 2px 8px rgba(0,0,0,.04)",
           transform: selected ? "translateY(-3px)" : undefined,
         } as React.CSSProperties
@@ -184,7 +187,7 @@ function SlideCard({
             fontSize: 14,
             fontWeight: 600,
             marginBottom: 5,
-            color: single ? "var(--accent-deep)" : "var(--accent-alt-deep)",
+            color: typeColor.bg,
           }}
         >
           {formatDateRange(ev.start_date, ev.end_date, locale)}
@@ -365,31 +368,25 @@ export default function EventCalendar({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 font-body text-sm text-ink-soft">
-        <span className="flex items-center gap-2">
-          <span
-            style={{
-              display: "inline-block",
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: "var(--accent)",
-            }}
-          />
-          {t("oneDay")}
-        </span>
-        <span className="flex items-center gap-2">
-          <span
-            style={{
-              display: "inline-block",
-              width: 28,
-              height: 10,
-              borderRadius: 999,
-              background: "var(--accent-alt)",
-            }}
-          />
-          {t("multiDay")}
-        </span>
+      <div className="flex flex-wrap items-center gap-3 font-body text-sm text-ink-soft">
+        {(["ciclostorica", "gravel", "cicloturistica", "mtb", "bikepacking", "randonnee"] as const).map((type) => {
+          const c = eventTypeColor(type);
+          return (
+            <span key={type} className="flex items-center gap-1.5">
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: c.bg,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ textTransform: "capitalize" }}>{type}</span>
+            </span>
+          );
+        })}
         <span className="ml-auto hidden text-xs sm:block">
           Tocca un giorno affollato per il ventaglio
         </span>
