@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { EventRow } from "@/lib/types/db";
-import { isSingleDay } from "@/lib/utils/dates";
 import EventCard from "@/components/events/EventCard";
 import DayEventsSheet from "@/components/events/DayEventsSheet";
+import { EVENT_TYPES, eventTypeColor } from "@/lib/constants/event-types";
 import { BCP47, type Locale } from "@/i18n/config";
 
 function pad(n: number): string {
@@ -63,8 +63,18 @@ export default function EventCalendar({
 }) {
   const saved = useMemo(() => new Set(savedIds), [savedIds]);
   const t = useTranslations("calendar");
+  const tTypes = useTranslations("eventTypes");
   const locale = useLocale() as Locale;
   const weekdays = t.raw("weekdays") as string[];
+
+  // Tipi di evento presenti nel dataset, per la legenda (in ordine canonico).
+  const legend = useMemo(() => {
+    const present = new Set(events.map((e) => e.event_type));
+    return {
+      types: EVENT_TYPES.filter((tp) => present.has(tp)),
+      hasOther: events.some((e) => !e.event_type),
+    };
+  }, [events]);
   const monthFmt = useMemo(
     () =>
       new Intl.DateTimeFormat(BCP47[locale], { month: "long", year: "numeric" }),
@@ -150,16 +160,26 @@ export default function EventCalendar({
         </button>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-3 font-body text-xs text-ink-soft">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-accent" />{" "}
-          {t("oneDay")}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-6 rounded bg-accent-alt" />{" "}
-          {t("multiDay")}
-        </span>
+      {/* Legenda per tipo di evento */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-body text-xs text-ink-soft">
+        {legend.types.map((tp) => (
+          <span key={tp} className="flex items-center gap-1">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: eventTypeColor(tp).bg }}
+            />
+            {tTypes(tp)}
+          </span>
+        ))}
+        {legend.hasOther && (
+          <span className="flex items-center gap-1">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: "var(--type-default)" }}
+            />
+            {t("otherType")}
+          </span>
+        )}
         {savedIds.length > 0 && (
           <span className="flex items-center gap-1">
             <span className="text-accent-deep">✓</span> {t("saved")}
@@ -262,14 +282,8 @@ export default function EventCalendar({
                     style={{ height: LANE_H, marginTop: LANE_GAP }}
                   >
                     {lane.map((seg) => {
-                      const single = isSingleDay(
-                        seg.event.start_date,
-                        seg.event.end_date,
-                      );
                       const isSaved = saved.has(seg.event.id);
-                      const color = single
-                        ? "bg-accent text-ink"
-                        : "bg-accent-alt text-ink";
+                      const c = eventTypeColor(seg.event.event_type);
                       const ring = isSaved ? "ring-1 ring-ink/50" : "";
                       return (
                         <Link
@@ -281,8 +295,10 @@ export default function EventCalendar({
                             gridColumn: `${seg.startIdx + 1} / span ${seg.span}`,
                             marginLeft: seg.continuesLeft ? 0 : 1,
                             marginRight: seg.continuesRight ? 0 : 1,
+                            backgroundColor: c.bg,
+                            color: c.fg,
                           }}
-                          className={`flex min-w-0 items-center overflow-hidden px-1 font-body text-[11px] leading-none hover:brightness-95 ${color} ${ring} ${
+                          className={`flex min-w-0 items-center overflow-hidden px-1 font-body text-[11px] leading-none hover:brightness-110 ${ring} ${
                             seg.continuesLeft ? "rounded-l-none" : "rounded-l"
                           } ${seg.continuesRight ? "rounded-r-none" : "rounded-r"}`}
                         >

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { EventRow } from "@/lib/types/db";
-import { isSingleDay, formatDateRange, formatLongDate } from "@/lib/utils/dates";
+import { formatDateRange, formatLongDate } from "@/lib/utils/dates";
 import { formatRoute } from "@/lib/utils/location";
+import { eventTypeColor } from "@/lib/constants/event-types";
 import type { Locale } from "@/i18n/config";
 
 // Overlay con il dettaglio degli eventi di un giorno: bottom sheet su mobile,
@@ -101,11 +102,8 @@ export default function DayEventsSheet({
                 className="card flex items-center gap-3 p-3 hover:bg-paper-soft"
               >
                 <span
-                  className={`inline-block h-3 w-3 shrink-0 rounded-full ${
-                    isSingleDay(e.start_date, e.end_date)
-                      ? "bg-accent"
-                      : "bg-accent-alt"
-                  }`}
+                  className="inline-block h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: eventTypeColor(e.event_type).bg }}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block font-head text-lg leading-tight">

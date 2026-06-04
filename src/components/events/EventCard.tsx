@@ -7,6 +7,7 @@ import type { EventRow } from "@/lib/types/db";
 import { formatDateRange, isSingleDay } from "@/lib/utils/dates";
 import { formatRoute } from "@/lib/utils/location";
 import { coverUrl } from "@/lib/utils/storage";
+import { eventTypeColor } from "@/lib/constants/event-types";
 import type { Locale } from "@/i18n/config";
 
 export default function EventCard({
@@ -18,6 +19,7 @@ export default function EventCard({
 }) {
   const url = coverUrl(event.cover_image_key);
   const t = useTranslations("card");
+  const tTypes = useTranslations("eventTypes");
   const locale = useLocale() as Locale;
   const single = isSingleDay(event.start_date, event.end_date);
 
@@ -37,9 +39,20 @@ export default function EventCard({
             <span className="font-head text-3xl text-ink-soft">🚲</span>
           </div>
         )}
-        <span className="chip absolute left-2 top-2 bg-paper/90 text-xs">
-          {single ? t("oneDay") : t("multiDay")}
-        </span>
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
+          <span className="chip bg-paper/90 text-xs">
+            {single ? t("oneDay") : t("multiDay")}
+          </span>
+          {event.event_type && (
+            <span className="chip bg-paper/90 text-xs">
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ backgroundColor: eventTypeColor(event.event_type).bg }}
+              />
+              {tTypes(event.event_type)}
+            </span>
+          )}
+        </div>
         {saved && (
           <span className="chip chip-active absolute right-2 top-2 text-xs font-medium shadow-sm">
             {t("savedBadge")}
