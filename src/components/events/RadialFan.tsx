@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventRow } from "@/lib/types/db";
 import { formatDateRange } from "@/lib/utils/dates";
+import { eventTypeColor } from "@/lib/constants/event-types";
 
 export type FanAnchor = {
   left: number;
@@ -128,12 +129,8 @@ function MobileSheet({
           }}
         >
           {events.map((ev) => {
-            const single = ev.start_date === ev.end_date;
             const expanded = expandedId === ev.id;
-            const c = single ? "var(--accent)" : "var(--accent-alt)";
-            const cDeep = single
-              ? "var(--accent-deep)"
-              : "var(--accent-alt-deep)";
+            const tc = eventTypeColor(ev.event_type);
             return (
               <button
                 key={ev.id}
@@ -142,9 +139,9 @@ function MobileSheet({
                   textAlign: "left",
                   padding: "12px 14px",
                   borderRadius: 14,
-                  border: `1.5px solid ${expanded ? c : "var(--line)"}`,
+                  border: `1.5px solid ${expanded ? tc.bg : "var(--line)"}`,
                   background: expanded
-                    ? `color-mix(in oklab, var(--paper), ${c} 8%)`
+                    ? `color-mix(in oklab, var(--paper), ${tc.bg} 8%)`
                     : "var(--paper)",
                   marginBottom: 8,
                   cursor: "pointer",
@@ -162,7 +159,7 @@ function MobileSheet({
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
-                    background: c,
+                    background: tc.bg,
                     marginTop: 5,
                     flexShrink: 0,
                   }}
@@ -185,7 +182,7 @@ function MobileSheet({
                       marginTop: 3,
                     }}
                   >
-                    {single ? "Un giorno" : "Più giorni"} · {ev.region}
+                    {ev.region}
                   </div>
 
                   {expanded && (
@@ -194,21 +191,34 @@ function MobileSheet({
                         marginTop: 10,
                         display: "flex",
                         flexDirection: "column",
-                        gap: 4,
+                        gap: 6,
                       }}
                     >
                       <span
                         style={{
                           fontSize: 13,
                           fontWeight: 600,
-                          color: cDeep,
+                          color: "var(--ink)",
                         }}
                       >
                         {formatDateRange(ev.start_date, ev.end_date, "it")}
                       </span>
                       {ev.event_type && (
                         <span
-                          style={{ fontSize: 12, color: "var(--ink-soft)" }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "3px 9px",
+                            borderRadius: 999,
+                            background: tc.bg,
+                            color: tc.fg,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: "0.02em",
+                            textTransform: "capitalize",
+                            alignSelf: "flex-start",
+                          }}
                         >
                           {ev.event_type}
                         </span>
@@ -216,7 +226,7 @@ function MobileSheet({
                       <span
                         style={{
                           fontSize: 12,
-                          color: cDeep,
+                          color: "var(--ink-soft)",
                           fontWeight: 600,
                           marginTop: 2,
                         }}
@@ -360,10 +370,7 @@ export default function RadialFan({
             y2={oy + t.y}
             className="cal-fan-spoke"
             style={{
-              stroke:
-                events[i]?.start_date === events[i]?.end_date
-                  ? "var(--accent)"
-                  : "var(--accent-alt)",
+              stroke: eventTypeColor(events[i]?.event_type).bg,
               opacity: 0.42,
               strokeWidth: 2,
               strokeLinecap: "round",
@@ -439,10 +446,8 @@ export default function RadialFan({
       {/* Nodes */}
       {events.map((ev, i) => {
         const t = targets[i]!;
-        const single = ev.start_date === ev.end_date;
         const expanded = expandedId === ev.id;
-        const c = single ? "var(--accent)" : "var(--accent-alt)";
-        const cDeep = single ? "var(--accent-deep)" : "var(--accent-alt-deep)";
+        const tc = eventTypeColor(ev.event_type);
 
         return (
           <button
@@ -461,11 +466,11 @@ export default function RadialFan({
                   ? "10px 16px 12px 18px"
                   : "8px 14px 8px 16px",
                 borderRadius: 13,
-                border: `1.5px solid ${expanded ? c : "var(--line)"}`,
+                border: `1.5px solid ${expanded ? tc.bg : "var(--line)"}`,
                 background: "var(--paper)",
                 textAlign: "left",
                 boxShadow: expanded
-                  ? `0 12px 30px rgba(0,0,0,.22), 0 0 0 2px ${c}`
+                  ? `0 12px 30px rgba(0,0,0,.22), 0 0 0 2px ${tc.bg}`
                   : "0 8px 24px rgba(0,0,0,.16)",
                 display: "flex",
                 flexDirection: "column",
@@ -486,7 +491,7 @@ export default function RadialFan({
                 width: 16,
                 height: 16,
                 borderRadius: "50%",
-                background: c,
+                background: tc.bg,
                 border: "3px solid var(--paper)",
                 boxShadow: "0 2px 6px rgba(0,0,0,.18)",
               }}
@@ -514,7 +519,7 @@ export default function RadialFan({
                 whiteSpace: "nowrap",
               }}
             >
-              {single ? "Un giorno" : "Più giorni"} · {ev.region}
+              {ev.region}
             </span>
 
             {expanded && (
@@ -528,12 +533,26 @@ export default function RadialFan({
                   }}
                 />
                 <span
-                  style={{ fontSize: 12, fontWeight: 600, color: cDeep }}
+                  style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}
                 >
                   {formatDateRange(ev.start_date, ev.end_date, "it")}
                 </span>
                 {ev.event_type && (
-                  <span style={{ fontSize: 11, color: "var(--ink-soft)" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: tc.bg,
+                      color: tc.fg,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.02em",
+                      textTransform: "capitalize",
+                      marginTop: 2,
+                    }}
+                  >
                     {ev.event_type}
                   </span>
                 )}
@@ -541,7 +560,7 @@ export default function RadialFan({
                   style={{
                     fontSize: 11,
                     color: "var(--ink-soft)",
-                    marginTop: 3,
+                    marginTop: 4,
                     fontStyle: "italic",
                   }}
                 >
