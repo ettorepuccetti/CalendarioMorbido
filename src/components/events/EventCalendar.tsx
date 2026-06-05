@@ -32,12 +32,10 @@ const laneTop = (lane: number) => D.headerH + lane * (D.laneH + D.gap);
 // ── Bar component ─────────────────────────────────────────────────────────
 function Bar({
   b,
-  selected,
   dimmed,
   hovIso,
 }: {
   b: PackedBar;
-  selected: boolean;
   dimmed: boolean;
   hovIso: string | null;
 }) {
@@ -50,7 +48,6 @@ function Bar({
     "multi",
     b.continuesLeft ? "cl" : "",
     b.continuesRight ? "cr" : "",
-    selected ? "sel" : "",
     dimmed ? "dim" : "",
   ]
     .filter(Boolean)
@@ -82,15 +79,11 @@ function Bar({
 function SlideCard({
   ev,
   saved,
-  selected,
   onClick,
-  cardRef,
 }: {
   ev: EventRow;
   saved: boolean;
-  selected: boolean;
   onClick: () => void;
-  cardRef: (el: HTMLElement | null) => void;
 }) {
   const locale = useLocale() as Locale;
   const t = useTranslations("calendar");
@@ -102,22 +95,18 @@ function SlideCard({
 
   return (
     <article
-      ref={cardRef}
-      className={`ecard${selected ? " ecard-sel" : ""}`}
+      className="ecard"
       style={
         {
           flex: "0 0 300px",
           scrollSnapAlign: "start",
           background: "var(--paper)",
-          border: `1px solid ${selected ? typeColor.bg : "var(--line)"}`,
+          border: "1px solid var(--line)",
           borderRadius: 20,
           overflow: "hidden",
           cursor: "pointer",
           transition: "transform .2s, box-shadow .2s, border-color .2s",
-          boxShadow: selected
-            ? `0 0 0 2px ${typeColor.bg}, 0 16px 38px rgba(0,0,0,.12)`
-            : "0 2px 8px rgba(0,0,0,.04)",
-          transform: selected ? "translateY(-3px)" : undefined,
+          boxShadow: "0 2px 8px rgba(0,0,0,.04)",
         } as React.CSSProperties
       }
       onClick={onClick}
@@ -282,7 +271,6 @@ export default function EventCalendar({
 
   const [ym, setYm] = useState(initial);
   const [hovIso, setHovIso] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fan, setFan] = useState<{
     day: CalDay;
     anchor: FanAnchor;
@@ -337,18 +325,8 @@ export default function EventCalendar({
     [events],
   );
 
-  // ── Slideshow scroll-to-selected ───────────────────────────────────────
+  // ── Slideshow scroll ───────────────────────────────────────────────────
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
-
-  useEffect(() => {
-    if (!selectedId) return;
-    const card = cardRefs.current[selectedId];
-    const sc = scrollerRef.current;
-    if (card && sc) {
-      sc.scrollTo({ left: card.offsetLeft - 20, behavior: "smooth" });
-    }
-  }, [selectedId]);
 
   const nudge = (dir: number) => {
     scrollerRef.current?.scrollTo({
@@ -579,7 +557,6 @@ export default function EventCalendar({
                         <Bar
                           key={`${b.ev.id}-${i}`}
                           b={b}
-                          selected={selectedId === b.ev.id}
                           dimmed={hovIso != null && !onHovDay}
                           hovIso={hovIso}
                         />
@@ -649,17 +626,7 @@ export default function EventCalendar({
                 key={ev.id}
                 ev={ev}
                 saved={saved.has(ev.id)}
-                selected={selectedId === ev.id}
-                cardRef={(el) => {
-                  cardRefs.current[ev.id] = el;
-                }}
-                onClick={() => {
-                  if (selectedId === ev.id) {
-                    router.push(`/eventi/${ev.id}`);
-                  } else {
-                    setSelectedId(ev.id);
-                  }
-                }}
+                onClick={() => router.push(`/eventi/${ev.id}`)}
               />
             ))}
           </div>
