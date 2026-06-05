@@ -261,6 +261,7 @@ export default function EventCalendar({
 }) {
   const saved = useMemo(() => new Set(savedIds), [savedIds]);
   const t = useTranslations("calendar");
+  const tTypes = useTranslations("eventTypes");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const monthFmt = useMemo(
@@ -396,7 +397,7 @@ export default function EventCalendar({
                   flexShrink: 0,
                 }}
               />
-              <span style={{ textTransform: "capitalize" }}>{type}</span>
+              <span>{tTypes(type)}</span>
             </span>
           );
         })}
