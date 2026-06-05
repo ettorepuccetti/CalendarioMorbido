@@ -53,7 +53,9 @@
     "close": "Close",
     "otherType": "Other",
     "noEventsMonth": "No events this month.",
-    "noEventsFilters": "No events match these filters."
+    "noEventsFilters": "No events match these filters.",
+    "fanHint": "Tap a busy day to see the fan",
+    "eventsCount": "{count, plural, one {# event} other {# events}}"
   },
   "card": {
     "oneDay": "One day",

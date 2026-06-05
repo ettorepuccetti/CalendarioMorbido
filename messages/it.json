@@ -53,7 +53,9 @@
     "close": "Chiudi",
     "otherType": "Altro",
     "noEventsMonth": "Nessun evento in questo mese.",
-    "noEventsFilters": "Nessun evento trovato con questi filtri."
+    "noEventsFilters": "Nessun evento trovato con questi filtri.",
+    "fanHint": "Tocca un giorno affollato per il ventaglio",
+    "eventsCount": "{count, plural, one {# evento} other {# eventi}}"
   },
   "card": {
     "oneDay": "Un giorno",
