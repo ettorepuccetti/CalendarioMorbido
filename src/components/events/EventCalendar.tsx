@@ -20,7 +20,7 @@ import {
 } from "@/lib/utils/calendar";
 import { makePlaceholder } from "@/lib/utils/placeholder";
 import { eventTypeColor } from "@/lib/constants/event-types";
-import RadialFan, { type FanAnchor } from "@/components/events/RadialFan";
+import DaySheet, { type FanAnchor } from "@/components/events/DaySheet";
 import type { Locale } from "@/i18n/config";
 import { BCP47 } from "@/i18n/config";
 
@@ -672,9 +672,9 @@ export default function EventCalendar({
         </p>
       )}
 
-      {/* Radial fan */}
+      {/* Day sheet */}
       {fan && (
-        <RadialFan
+        <DaySheet
           key={fan.day.iso}
           anchor={fan.anchor}
           day={fan.day}
