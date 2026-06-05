@@ -43,18 +43,13 @@ function arcTargets(
 function MobileSheet({
   day,
   events,
-  expandedId,
-  onExpand,
-  onNavigate,
   onClose,
 }: {
   day: { iso: string };
   events: EventRow[];
-  expandedId: string | null;
-  onExpand: (id: string) => void;
-  onNavigate: (id: string) => void;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [y, m0, dayNum] = day.iso.split("-").map(Number);
   const d = new Date(y!, (m0 ?? 1) - 1, dayNum ?? 1);
   const WD = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
@@ -137,8 +132,9 @@ function MobileSheet({
           }}
         >
           {events.map((ev) => {
-            const expanded = expandedId === ev.id;
             const tc = eventTypeColor(ev.event_type);
+            const img = coverUrl(ev.cover_image_key);
+
             return (
               <button
                 key={ev.id}
@@ -147,21 +143,20 @@ function MobileSheet({
                   textAlign: "left",
                   padding: "12px 14px",
                   borderRadius: 14,
-                  border: `1.5px solid ${expanded ? tc.bg : "var(--line)"}`,
-                  background: expanded
-                    ? `color-mix(in oklab, var(--paper), ${tc.bg} 8%)`
-                    : "var(--paper)",
+                  border: `1.5px solid var(--line)`,
+                  background: "var(--paper)",
                   marginBottom: 8,
                   cursor: "pointer",
-                  transition: "border-color .18s, background .18s",
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 12,
                 }}
-                onClick={() =>
-                  expanded ? onNavigate(ev.id) : onExpand(ev.id)
-                }
+                onClick={() => {
+                  onClose();
+                  router.push(`/eventi/${ev.id}`);
+                }}
               >
+                {/* Day badge */}
                 <span
                   style={{
                     minWidth: 28,
@@ -182,106 +177,96 @@ function MobileSheet({
                 >
                   {numDays(ev.start_date, ev.end_date)}g
                 </span>
+
                 <div style={{ minWidth: 0, flex: 1 }}>
+                  {/* Cover image */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 90,
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      position: "relative",
+                      marginBottom: 8,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {img ? (
+                      <Image
+                        src={img}
+                        alt={ev.title}
+                        fill
+                        sizes="280px"
+                        style={{ objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          backgroundImage: `url("${makePlaceholder(ev.id, 280, 90)}")`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Title */}
                   <div
                     style={{
                       fontWeight: 700,
                       fontSize: 15,
                       lineHeight: 1.2,
                       color: "var(--ink)",
+                      marginBottom: 4,
                     }}
                   >
                     {ev.title}
                   </div>
+
+                  {/* Dates */}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--ink)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {formatDateRange(ev.start_date, ev.end_date, "it")}
+                  </div>
+
+                  {/* Region */}
                   <div
                     style={{
                       fontSize: 12,
                       color: "var(--ink-soft)",
-                      marginTop: 3,
+                      marginBottom: 6,
                     }}
                   >
                     {ev.region}
                   </div>
 
-                  {expanded && (
-                    <div
+                  {/* Type chip */}
+                  {ev.event_type && (
+                    <span
                       style={{
-                        marginTop: 10,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "3px 9px",
+                        borderRadius: 999,
+                        background: tc.bg,
+                        color: tc.fg,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: "0.02em",
+                        textTransform: "capitalize",
                       }}
                     >
-                      <div
-                        style={{
-                          width: "100%",
-                          height: 90,
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          position: "relative",
-                          pointerEvents: "none",
-                        }}
-                      >
-                        {coverUrl(ev.cover_image_key) ? (
-                          <Image
-                            src={coverUrl(ev.cover_image_key)!}
-                            alt={ev.title}
-                            fill
-                            sizes="280px"
-                            style={{ objectFit: "cover" }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              backgroundImage: `url("${makePlaceholder(ev.id, 280, 90)}")`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                            }}
-                          />
-                        )}
-                      </div>
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "var(--ink)",
-                        }}
-                      >
-                        {formatDateRange(ev.start_date, ev.end_date, "it")}
-                      </span>
-                      {ev.event_type && (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 5,
-                            padding: "3px 9px",
-                            borderRadius: 999,
-                            background: tc.bg,
-                            color: tc.fg,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            letterSpacing: "0.02em",
-                            textTransform: "capitalize",
-                            alignSelf: "flex-start",
-                          }}
-                        >
-                          {ev.event_type}
-                        </span>
-                      )}
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "var(--ink-soft)",
-                          fontWeight: 600,
-                          marginTop: 2,
-                        }}
-                      >
-                        Tocca di nuovo per aprire →
-                      </span>
-                    </div>
+                      {ev.event_type}
+                    </span>
                   )}
                 </div>
               </button>
@@ -334,9 +319,6 @@ export default function RadialFan({
       <MobileSheet
         day={day}
         events={events}
-        expandedId={expandedId}
-        onExpand={setExpandedId}
-        onNavigate={(id) => router.push(`/eventi/${id}`)}
         onClose={onClose}
       />
     );

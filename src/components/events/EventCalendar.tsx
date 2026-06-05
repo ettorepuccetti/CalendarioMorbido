@@ -72,7 +72,6 @@ function Bar({
       }
       title={b.ev.title}
     >
-      {b.single && <span className="cal-bar-dot" />}
       <span className="cal-bar-label">{b.ev.title}</span>
       {b.continuesRight && <span className="cal-bar-arrow">→</span>}
     </div>
@@ -212,6 +211,7 @@ function SlideCard({
             color: "var(--ink-soft)",
             fontSize: 14,
             fontWeight: 500,
+            marginBottom: 10,
           }}
         >
           <span
@@ -228,6 +228,24 @@ function SlideCard({
           />
           {city} · {ev.region}
         </div>
+        {ev.event_type && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "3px 10px",
+              borderRadius: 999,
+              background: typeColor.bg,
+              color: typeColor.fg,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              textTransform: "capitalize",
+            }}
+          >
+            {ev.event_type}
+          </span>
+        )}
       </div>
     </article>
   );
@@ -245,7 +263,6 @@ export default function EventCalendar({
   const t = useTranslations("calendar");
   const locale = useLocale() as Locale;
   const router = useRouter();
-
   const monthFmt = useMemo(
     () =>
       new Intl.DateTimeFormat(BCP47[locale], { month: "long", year: "numeric" }),
@@ -314,13 +331,9 @@ export default function EventCalendar({
     (day: CalDay, rect: DOMRect) => {
       const dayEvs = eventsOnDay(events, day.iso);
       if (dayEvs.length === 0) return;
-      if (dayEvs.length === 1) {
-        router.push(`/eventi/${dayEvs[0]!.id}`);
-        return;
-      }
       setFan({ day, anchor: rect, events: dayEvs });
     },
-    [events, router],
+    [events],
   );
 
   // ── Slideshow scroll-to-selected ───────────────────────────────────────
@@ -387,9 +400,6 @@ export default function EventCalendar({
             </span>
           );
         })}
-        <span className="ml-auto hidden text-xs sm:block">
-          Tocca un giorno affollato per il ventaglio
-        </span>
       </div>
 
       {/* Calendar grid */}
