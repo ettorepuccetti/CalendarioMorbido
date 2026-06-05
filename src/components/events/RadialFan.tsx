@@ -10,10 +10,7 @@ import { parseIso } from "@/lib/utils/calendar";
 import { coverUrl } from "@/lib/utils/storage";
 import { makePlaceholder } from "@/lib/utils/placeholder";
 
-function numDays(start: string, end: string): number {
-  return Math.round((parseIso(end).getTime() - parseIso(start).getTime()) / 86400000) + 1;
-}
-
+// FanAnchor kept for API compatibility — no longer used for positioning.
 export type FanAnchor = {
   left: number;
   top: number;
@@ -21,86 +18,75 @@ export type FanAnchor = {
   height: number;
 };
 
-type NodeTarget = { x: number; y: number };
-
-function arcTargets(
-  n: number,
-  cell: { x: number; y: number },
-  vw: number,
-  vh: number,
-): NodeTarget[] {
-  const base = Math.atan2(vh / 2 - cell.y, vw / 2 - cell.x);
-  const spread = (Math.min(60 + n * 15, 248) * Math.PI) / 180;
-  const radius = Math.min(128 + n * 11, 250);
-  return Array.from({ length: n }, (_, i) => {
-    const t = n === 1 ? 0.5 : i / (n - 1);
-    const a = base - spread / 2 + spread * t;
-    return { x: Math.cos(a) * radius, y: Math.sin(a) * radius };
-  });
+function numDays(start: string, end: string): number {
+  return Math.round(
+    (parseIso(end).getTime() - parseIso(start).getTime()) / 86400000,
+  ) + 1;
 }
 
-// ── Mobile bottom sheet ───────────────────────────────────────────────────
-function MobileSheet({
+// Responsive sheet: bottom sheet on mobile, centered dialog on desktop.
+export default function RadialFan({
   day,
   events,
   onClose,
 }: {
+  anchor: FanAnchor;
   day: { iso: string };
   events: EventRow[];
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [y, m0, dayNum] = day.iso.split("-").map(Number);
-  const d = new Date(y!, (m0 ?? 1) - 1, dayNum ?? 1);
+  const [shown, setShown] = useState(false);
+
+  const [yr, m0, dayNum] = day.iso.split("-").map(Number);
+  const d = new Date(yr!, (m0 ?? 1) - 1, dayNum ?? 1);
   const WD = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
   const label = `${WD[d.getDay()]!} ${d.getDate()}`;
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setShown(true));
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKey);
+      setShown(false);
+    };
+  }, [onClose]);
+
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(24,22,18,.45)",
-        backdropFilter: "blur(3px)",
-        WebkitBackdropFilter: "blur(3px)",
-      }}
-      onClick={onClose}
+      className="fixed inset-0 z-40"
+      role="dialog"
+      aria-modal="true"
     >
-      <div
-        className="cal-sheet"
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-hidden
+        tabIndex={-1}
+        onClick={onClose}
+        className={`absolute inset-0 transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
         style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "var(--paper)",
-          borderTopLeftRadius: 22,
-          borderTopRightRadius: 22,
-          maxHeight: "76vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          boxShadow: "0 -8px 32px rgba(0,0,0,.18)",
+          background: "rgba(24,22,18,.45)",
+          backdropFilter: "blur(3px)",
+          WebkitBackdropFilter: "blur(3px)",
         }}
-        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Panel: bottom sheet on mobile, centered dialog on desktop */}
+      <div
+        className={`cal-sheet absolute inset-x-0 bottom-0 flex max-h-[80vh] flex-col rounded-t-[22px] bg-paper shadow-xl transition-all duration-300 ease-out sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[80vh] sm:max-w-md sm:rounded-[18px] ${
+          shown
+            ? "translate-y-0 sm:scale-100 sm:opacity-100"
+            : "translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0"
+        }`}
       >
-        {/* Handle */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            padding: "12px 0 6px",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 4,
-              borderRadius: 999,
-              background: "var(--line)",
-            }}
-          />
+        {/* Handle (mobile only) */}
+        <div className="flex justify-center pb-1.5 pt-3 sm:hidden">
+          <div className="h-1 w-9 rounded-full bg-line" />
         </div>
 
         {/* Header */}
@@ -113,9 +99,7 @@ function MobileSheet({
             alignItems: "baseline",
           }}
         >
-          <span
-            style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.01em" }}
-          >
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.01em" }}>
             {label}
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
@@ -143,7 +127,7 @@ function MobileSheet({
                   textAlign: "left",
                   padding: "12px 14px",
                   borderRadius: 14,
-                  border: `1.5px solid var(--line)`,
+                  border: "1.5px solid var(--line)",
                   background: "var(--paper)",
                   marginBottom: 8,
                   cursor: "pointer",
@@ -156,7 +140,7 @@ function MobileSheet({
                   router.push(`/eventi/${ev.id}`);
                 }}
               >
-                {/* Day badge */}
+                {/* Day-count badge */}
                 <span
                   style={{
                     minWidth: 28,
@@ -196,7 +180,7 @@ function MobileSheet({
                         src={img}
                         alt={ev.title}
                         fill
-                        sizes="280px"
+                        sizes="(min-width: 640px) 420px, 280px"
                         style={{ objectFit: "cover" }}
                       />
                     ) : (
@@ -231,7 +215,7 @@ function MobileSheet({
                       fontSize: 13,
                       fontWeight: 600,
                       color: "var(--ink)",
-                      marginBottom: 6,
+                      marginBottom: 4,
                     }}
                   >
                     {formatDateRange(ev.start_date, ev.end_date, "it")}
@@ -254,7 +238,6 @@ function MobileSheet({
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: 5,
                         padding: "3px 9px",
                         borderRadius: 999,
                         background: tc.bg,
@@ -273,388 +256,6 @@ function MobileSheet({
             );
           })}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Desktop arc fan ───────────────────────────────────────────────────────
-export default function RadialFan({
-  anchor,
-  day,
-  events,
-  onClose,
-}: {
-  anchor: FanAnchor;
-  day: { iso: string };
-  events: EventRow[];
-  onClose: () => void;
-}) {
-  const router = useRouter();
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const isMobile = vw < 640;
-
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const handleNode = (ev: EventRow, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (expandedId === ev.id) {
-      router.push(`/eventi/${ev.id}`);
-    } else {
-      setExpandedId(ev.id);
-    }
-  };
-
-  if (isMobile) {
-    return (
-      <MobileSheet
-        day={day}
-        events={events}
-        onClose={onClose}
-      />
-    );
-  }
-
-  // ── Arc layout ──────────────────────────────────────────────────────────
-  const cell = {
-    x: anchor.left + anchor.width / 2,
-    y: anchor.top + anchor.height / 2,
-  };
-  const targets = arcTargets(events.length, cell, vw, vh);
-
-  const exX = 220, exY = 90, M = 22, MT = 26;
-  const xs = targets.map((t) => t.x);
-  const ys = targets.map((t) => t.y);
-  const bbMinX = Math.min(0, ...xs) - exX;
-  const bbMaxX = Math.max(0, ...xs) + exX;
-  const bbMinY = Math.min(0, ...ys) - exY;
-  const bbMaxY = Math.max(0, ...ys) + exY;
-  const clamp = (v: number, a: number, b: number) =>
-    Math.max(a, Math.min(b, v));
-  const lowX = M - bbMinX, highX = vw - M - bbMaxX;
-  const lowY = MT - bbMinY, highY = vh - M - bbMaxY;
-  const ox =
-    highX < lowX
-      ? vw / 2 - (bbMinX + bbMaxX) / 2
-      : clamp(cell.x, lowX, highX);
-  const oy =
-    highY < lowY
-      ? vh / 2 - (bbMinY + bbMaxY) / 2
-      : clamp(cell.y, lowY, highY);
-  const shifted = Math.hypot(ox - cell.x, oy - cell.y) > 8;
-
-  const [yr, m0, dayNum] = day.iso.split("-").map(Number);
-  const d = new Date(yr!, (m0 ?? 1) - 1, dayNum ?? 1);
-  const WD = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-  const hubLabel = `${WD[d.getDay()]!} ${d.getDate()}`;
-
-  return (
-    <div
-      className="cal-fan-overlay"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(24,22,18,.40)",
-        backdropFilter: "blur(3px)",
-        WebkitBackdropFilter: "blur(3px)",
-      }}
-      onClick={onClose}
-    >
-      {/* Spokes */}
-      <svg
-        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-        width={vw}
-        height={vh}
-      >
-        {shifted && (
-          <line
-            x1={cell.x}
-            y1={cell.y}
-            x2={ox}
-            y2={oy}
-            style={{
-              stroke: "var(--accent-alt)",
-              opacity: 0.6,
-              strokeWidth: 2,
-              strokeDasharray: "2 6",
-              strokeLinecap: "round",
-            }}
-          />
-        )}
-        {targets.map((t, i) => (
-          <line
-            key={i}
-            x1={ox}
-            y1={oy}
-            x2={ox + t.x}
-            y2={oy + t.y}
-            className="cal-fan-spoke"
-            style={{
-              stroke: eventTypeColor(events[i]?.event_type).bg,
-              opacity: 0.42,
-              strokeWidth: 2,
-              strokeLinecap: "round",
-              ["--d" as string]: `${i * 42}ms`,
-            }}
-          />
-        ))}
-      </svg>
-
-      {shifted && (
-        <span
-          style={{
-            position: "absolute",
-            left: cell.x,
-            top: cell.y,
-            transform: "translate(-50%,-50%)",
-            display: "block",
-            width: 14,
-            height: 14,
-            borderRadius: "50%",
-            background: "var(--accent-alt)",
-            border: "3px solid var(--paper)",
-            boxShadow: "0 2px 8px rgba(0,0,0,.3)",
-          }}
-        />
-      )}
-
-      {/* Hub */}
-      <div
-        className="cal-fan-hub"
-        style={{
-          position: "absolute",
-          left: ox,
-          top: oy,
-          transform: "translate(-50%,-50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 88,
-          height: 88,
-          borderRadius: "50%",
-          background: "var(--paper)",
-          color: "var(--ink)",
-          boxShadow: "0 10px 30px rgba(0,0,0,.22)",
-          border: "2px solid var(--accent-alt)",
-          userSelect: "none",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 800,
-            letterSpacing: "-0.01em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {hubLabel}
-        </span>
-        <span
-          style={{
-            fontSize: 11,
-            color: "var(--ink-soft)",
-            marginTop: 1,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {events.length} eventi
-        </span>
-      </div>
-
-      {/* Nodes */}
-      {events.map((ev, i) => {
-        const t = targets[i]!;
-        const expanded = expandedId === ev.id;
-        const tc = eventTypeColor(ev.event_type);
-
-        return (
-          <button
-            key={ev.id}
-            className="cal-fan-node"
-            style={
-              {
-                position: "absolute",
-                left: ox,
-                top: oy,
-                transform: `translate(-50%,-50%) translate(${t.x}px,${t.y}px)`,
-                ["--d"]: `${i * 42}ms`,
-                width: expanded ? 220 : undefined,
-                maxWidth: expanded ? 220 : 196,
-                padding: expanded
-                  ? "10px 16px 12px 18px"
-                  : "8px 14px 8px 16px",
-                borderRadius: 13,
-                border: `1.5px solid ${expanded ? tc.bg : "var(--line)"}`,
-                background: "var(--paper)",
-                textAlign: "left",
-                boxShadow: expanded
-                  ? `0 12px 30px rgba(0,0,0,.22), 0 0 0 2px ${tc.bg}`
-                  : "0 8px 24px rgba(0,0,0,.16)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                gap: 2,
-                cursor: "pointer",
-                transition:
-                  "box-shadow .18s, border-color .18s, width .18s, padding .18s",
-              } as React.CSSProperties
-            }
-            onClick={(e) => handleNode(ev, e)}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: -8,
-                left: -8,
-                minWidth: 20,
-                height: 20,
-                padding: "0 5px",
-                borderRadius: 999,
-                background: tc.bg,
-                color: tc.fg,
-                border: "2.5px solid var(--paper)",
-                boxShadow: "0 2px 6px rgba(0,0,0,.18)",
-                fontSize: 10,
-                fontWeight: 800,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {numDays(ev.start_date, ev.end_date)}g
-            </span>
-            <span
-              style={{
-                fontSize: 13.5,
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-                lineHeight: 1.15,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 168,
-                color: "var(--ink)",
-              }}
-            >
-              {ev.title}
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--ink-soft)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {ev.region}
-            </span>
-
-            {expanded && (
-              <>
-                <div
-                  style={{
-                    width: "100%",
-                    height: 76,
-                    borderRadius: 8,
-                    position: "relative",
-                    marginTop: 8,
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    pointerEvents: "none",
-                  }}
-                >
-                  {coverUrl(ev.cover_image_key) ? (
-                    <Image
-                      src={coverUrl(ev.cover_image_key)!}
-                      alt={ev.title}
-                      fill
-                      sizes="220px"
-                      style={{ objectFit: "cover", pointerEvents: "none" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        backgroundImage: `url("${makePlaceholder(ev.id, 220, 80)}")`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
-                </div>
-                <span
-                  style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", marginTop: 6 }}
-                >
-                  {formatDateRange(ev.start_date, ev.end_date, "it")}
-                </span>
-                {ev.event_type && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: "3px 9px",
-                      borderRadius: 999,
-                      background: tc.bg,
-                      color: tc.fg,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: "0.02em",
-                      textTransform: "capitalize",
-                      marginTop: 2,
-                    }}
-                  >
-                    {ev.event_type}
-                  </span>
-                )}
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "var(--ink-soft)",
-                    marginTop: 4,
-                    fontStyle: "italic",
-                  }}
-                >
-                  Tocca di nuovo per aprire →
-                </span>
-              </>
-            )}
-          </button>
-        );
-      })}
-
-      <div
-        style={{
-          position: "fixed",
-          left: "50%",
-          bottom: 26,
-          transform: "translateX(-50%)",
-          color: "#fff",
-          opacity: 0.82,
-          fontSize: 13,
-          fontWeight: 500,
-          letterSpacing: "0.01em",
-          pointerEvents: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {expandedId
-          ? "Tocca di nuovo per aprire · Esc per chiudere"
-          : "Tocca un evento · Esc per chiudere"}
       </div>
     </div>
   );
