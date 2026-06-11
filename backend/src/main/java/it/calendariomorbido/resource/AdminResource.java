@@ -7,7 +7,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,7 +48,7 @@ public class AdminResource {
         e.persist();
 
         p.status = "approved";
-        p.reviewedAt = LocalDateTime.now();
+        p.reviewedAt = OffsetDateTime.now();
 
         return Response.ok(Map.of("eventId", e.id)).build();
     }
@@ -66,7 +66,7 @@ public class AdminResource {
 
         p.status = "rejected";
         p.rejectionReason = body.get("reason");
-        p.reviewedAt = LocalDateTime.now();
+        p.reviewedAt = OffsetDateTime.now();
 
         return Response.ok(p).build();
     }

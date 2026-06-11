@@ -2,7 +2,7 @@ package it.calendariomorbido.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -19,10 +19,10 @@ public class SavedEvent extends PanacheEntityBase {
     public UUID eventId;
 
     @Column(name = "saved_at")
-    public LocalDateTime savedAt;
+    public OffsetDateTime savedAt;
 
     @PrePersist
     void onCreate() {
-        savedAt = LocalDateTime.now();
+        savedAt = OffsetDateTime.now();
     }
 }
