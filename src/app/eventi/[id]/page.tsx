@@ -19,11 +19,12 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [t, locale, supabase] = await Promise.all([
+  const [t, localeRaw, supabase] = await Promise.all([
     getTranslations(),
     getLocale(),
     createClient(),
   ]);
+  const locale = localeRaw as Locale;
 
   const [{ data: { user } }, { data: detail }] = await Promise.all([
     supabase.auth.getUser(),
