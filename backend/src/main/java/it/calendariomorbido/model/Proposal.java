@@ -1,5 +1,9 @@
 package it.calendariomorbido.model;
 
+// Public fields are intentional: Panache's Active Record pattern uses bytecode enhancement at
+// compile time to rewrite direct field access into getter/setter calls, preserving encapsulation
+// at runtime. See: https://quarkus.io/guides/hibernate-orm-panache#solution-1-using-the-active-record-pattern
+
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.time.LocalDate;
