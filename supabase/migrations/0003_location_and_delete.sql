@@ -23,11 +23,19 @@ alter table public.proposals add column if not exists end_comune text;
 alter table public.proposals add column if not exists end_provincia text;
 
 -- migra i dati esistenti dal vecchio campo testo, poi rendi NOT NULL
-update public.proposals
-  set start_comune = coalesce(start_comune, start_location_name, '—'),
-      start_provincia = coalesce(start_provincia, '—'),
-      end_comune = coalesce(end_comune, end_location_name)
-  where start_comune is null or start_provincia is null;
+-- (solo se la vecchia colonna esiste — su DB nuovi 0001 ha già il nuovo schema)
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'proposals' and column_name = 'start_location_name'
+  ) then
+    update public.proposals
+      set start_comune = coalesce(start_comune, start_location_name, '—'),
+          start_provincia = coalesce(start_provincia, '—'),
+          end_comune = coalesce(end_comune, end_location_name)
+      where start_comune is null or start_provincia is null;
+  end if;
+end $$;
 
 alter table public.proposals alter column start_comune set not null;
 alter table public.proposals alter column start_provincia set not null;
@@ -45,11 +53,18 @@ alter table public.events add column if not exists start_provincia text;
 alter table public.events add column if not exists end_comune text;
 alter table public.events add column if not exists end_provincia text;
 
-update public.events
-  set start_comune = coalesce(start_comune, start_location_name, '—'),
-      start_provincia = coalesce(start_provincia, '—'),
-      end_comune = coalesce(end_comune, end_location_name)
-  where start_comune is null or start_provincia is null;
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'events' and column_name = 'start_location_name'
+  ) then
+    update public.events
+      set start_comune = coalesce(start_comune, start_location_name, '—'),
+          start_provincia = coalesce(start_provincia, '—'),
+          end_comune = coalesce(end_comune, end_location_name)
+      where start_comune is null or start_provincia is null;
+  end if;
+end $$;
 
 alter table public.events alter column start_comune set not null;
 alter table public.events alter column start_provincia set not null;

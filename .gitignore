@@ -33,3 +33,7 @@ yarn-error.log*
 # claude code local settings
 .claude/settings.local.json
 .claude/settings.json
+
+# supabase local
+supabase/.branches
+supabase/.temp

@@ -5,7 +5,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import SaveButton from "@/components/events/SaveButton";
 import DeleteEventButton from "@/components/admin/DeleteEventButton";
-import { isAdmin } from "@/lib/auth/require-user";
 import { coverUrl } from "@/lib/utils/storage";
 import { formatDateRange, isSingleDay } from "@/lib/utils/dates";
 import { formatPlace } from "@/lib/utils/location";
@@ -20,35 +19,22 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const t = await getTranslations();
-  const locale = (await getLocale()) as Locale;
-  const supabase = await createClient();
+  const [t, localeRaw, supabase] = await Promise.all([
+    getTranslations(),
+    getLocale(),
+    createClient(),
+  ]);
+  const locale = localeRaw as Locale;
 
-  const { data: event } = await supabase
-    .from("events")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: { user } }, { data: detail }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc("get_event_detail", { p_event_id: id }),
+  ]);
 
-  if (!event) notFound();
-  const ev = event as EventRow;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const admin = user ? await isAdmin() : false;
-
-  let saved = false;
-  if (user) {
-    const { data: savedRow } = await supabase
-      .from("saved_events")
-      .select("event_id")
-      .eq("user_id", user.id)
-      .eq("event_id", id)
-      .maybeSingle();
-    saved = !!savedRow;
-  }
+  if (!detail) notFound();
+  const ev = (detail as { event: EventRow }).event;
+  const saved = (detail as { saved: boolean }).saved;
+  const admin = (detail as { is_admin: boolean }).is_admin;
 
   const cover = coverUrl(ev.cover_image_key);
 
